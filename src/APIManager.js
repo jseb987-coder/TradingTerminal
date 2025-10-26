@@ -1,9 +1,9 @@
 import axios from 'axios';
-const API_BASE = process.env.REACT_APP_API_BASE || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
 
 class APIManager {
-    initialize(token) {
+    initialize(token,symbol) {
         this._accessToken = token;
+        this._symbol = symbol;
     }
 
     async postUrl(url, data, options = {}) {
@@ -36,6 +36,45 @@ class APIManager {
         throw new Error(`[APIManager] GET ${url} failed after ${maxRetries} attempts.`);
     }
 
+     async getUrl(url, callback = null, options = {}) {
+        const headers = this.buildHeaders(this._accessToken);
+        const maxRetries = options.maxRetries ?? Infinity;
+        const baseDelay = options.baseDelay ?? 1000; // ms
+        const factor = options.factor ?? 2;
+        const maxDelay = options.maxDelay ?? 30000; // 30 seconds
+        const cancelToken = options.cancelToken;
+
+        let attempt = 0;
+        while (attempt < maxRetries) {
+            try {
+                const axiosConfig = { headers };
+                if (cancelToken) {
+                    axiosConfig.cancelToken = cancelToken;
+                }
+                const response = await axios.get(url, axiosConfig);
+                if (callback) callback(response.data);
+                return response.data;
+            } catch (error) {
+                if (axios.isCancel(error)) {
+                    console.log('[APIManager.getUrl] Request cancelled:', error.message);
+                    throw error; // Re-throw cancellation
+                }
+                const isNetworkError = !error.response;
+                if (!isNetworkError) {
+                    // Not a network error, so fail fast
+                    console.error(error?.response?.status ? `Error: ${error.response.status} - ${error.response.data}` : error.message);
+                    throw error;
+                }
+
+                attempt++;
+                const delay = Math.min(baseDelay * Math.pow(factor, attempt - 1), maxDelay);
+                console.warn(`[APIManager] Network error on GET ${url}. Retrying attempt ${attempt} in ${delay}ms...`);
+                await this._sleep(delay);
+            }
+        }
+        throw new Error(`[APIManager] GET ${url} failed after ${maxRetries} attempts.`);
+    }
+
    
     _sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -47,6 +86,14 @@ class APIManager {
             'Accept': 'application/json',
             'Authorization': 'Bearer ' + accessToken
         };
+    }
+
+    getAccountBalance(segment = null) {
+        let url = 'https://api.upstox.com/v2/user/get-funds-and-margin';
+        if (segment) {
+            url += `?segment=${segment}`;
+        }
+        return this.getUrl(url);
     }
 
      async closeAllPositions() {
