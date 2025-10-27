@@ -1,6 +1,6 @@
 import React from "react";
 import TradeDelegate from "./TradeDelegate";
-import MarketDataFeed from "./socket/MarketDataFeed";
+import { MarketDataFeed } from "./socket/MarketDataFeed";
 
 const _tradeDelegate = new TradeDelegate();
 const SYMBOL_NAME = "NSE_INDEX|Nifty 50";
@@ -24,61 +24,45 @@ class AutoTrader extends React.Component {
     this.setPositionStatus = this.setPositionStatus.bind(this);
     this.marketDataFeed = null;
     this._tester = 0;
+    this.handleMarketData = this.handleMarketData.bind(this);
   }
 
-   async setUpMarketFeed(token) {
-    // Pass the instrument key from TradeDelegate
-    const instrumentKey = _tradeDelegate._symbol;
-    this.marketDataFeed = new MarketDataFeed();
+  async setUpMarketFeed(token, symbol) {
+    this.marketDataFeed = new MarketDataFeed(token, this.handleMarketData, [symbol], () => this.setState({ dataStreamConnected: true }), () => this.setState({ dataStreamConnected: false }));
+  }
+
+  
+
+
+  async setUpAutoTrader() {
+
     try {
-      await this.marketDataFeed.init(token, SYMBOL_NAME);
-      if (this.marketDataFeed.ws) {
-        this.marketDataFeed.ws.onmessage = async (event) => {
-          const arrayBuffer = await (event.data.arrayBuffer ? event.data.arrayBuffer() : new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject();
-            reader.readAsArrayBuffer(event.data);
-          }));
-          let buffer = Buffer.from(arrayBuffer);
-          let response = MarketDataFeed.decodeProfobuf(buffer);
-          console.log('[AutoTrader] MarketDataFeed stream:', response);
-        };
-        this.setState({ dataStreamConnected: true });
-      } else {
-        this.setState({ dataStreamConnected: false });
-      }
-    } catch (err) {
-      this.setState({ dataStreamConnected: false });
-    }
-  }
-
-
-   async setUpAutoTrader() {
-    
-      try {
-        const backendOk = await _tradeDelegate.setupCalls();
-        if (backendOk) {
-          this.setState({ backendConnected: true });
-        } else {
-          this.setState({ backendConnected: false });
-        }
-        if(_tradeDelegate._currentPosition === 'CALL') {
+      const backendOk = await _tradeDelegate.setupCalls();
+      if (backendOk) {
+        this.setState({ backendConnected: true });
+        if (_tradeDelegate._currentPosition === 'CALL') {
           this.setPositionStatus(1);
-        } else if(_tradeDelegate._currentPosition === 'PUT') {
+        } else if (_tradeDelegate._currentPosition === 'PUT') {
           this.setPositionStatus(2);
         }
-      } catch {
-          this.setState({ backendConnected: false });
+      } else {
+        this.setState({ backendConnected: false });
       }
+      return backendOk;
+    } catch {
+      this.setState({ backendConnected: false });
+      return false;
+    }
   }
 
   async componentDidMount() {
     window.addEventListener('online', this.handleOnline);
     window.addEventListener('offline', this.handleOffline);
-    _tradeDelegate.initialize(this.token);
-    await this.setUpMarketFeed(this.token);
-    await this.setUpAutoTrader(); 
+    _tradeDelegate.initialize(this.token, SYMBOL_NAME);
+    const backendOk = await this.setUpAutoTrader();
+    if (backendOk) {
+      await this.setUpMarketFeed(this.token, SYMBOL_NAME);
+    }
   }
 
   componentWillUnmount() {
@@ -98,15 +82,33 @@ class AutoTrader extends React.Component {
     this.setState({ positionStatus: value });
   }
 
+  handleMarketData(data) {
+    try {
+      const parsed = JSON.parse(data);
+      const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
+      if (ltp !== undefined) {
+        console.log('LTP:', ltp);
+        _tradeDelegate._ltp = ltp;
+      } else {
+        console.log('LTP not available in data');
+      }
+    } catch (error) {
+      console.error('Error parsing market data:', error);
+    }
+  }
+
   async handleBuy() {
     try {
-      // Placeholder: need to provide actual instrument_token and quantity
-      // const instrument_token = 'NSE_FO|58717'; // Example
-      // const quantity = 75;
-      // const response = await _tradeDelegate.buyOrder(instrument_token, quantity);
-      this.setState({ backendConnected: !this.state.backendConnected });
-      const response = {};
-      console.log('Buy order response:', response);
+      await _tradeDelegate.closeAllPositions();
+      const atmCall = _tradeDelegate.getATMOption('CALL', _tradeDelegate._ltp);
+      if (atmCall) {
+        const quantity = atmCall.lot_size;
+        const response = await _tradeDelegate.buyOrder(atmCall.instrument_token, quantity);
+        console.log('Buy order response:', response);
+        this.setPositionStatus(1);
+      } else {
+        console.error('No ATM CALL option found');
+      }
     } catch (error) {
       console.error('Buy order failed:', error);
     }
@@ -114,14 +116,16 @@ class AutoTrader extends React.Component {
 
   async handleSell() {
     try {
-      // // Placeholder: need to provide actual instrument_token and quantity
-      // const instrument_token = 'NSE_FO|58717'; // Example
-      // const quantity = 75;
-      // const response = await _tradeDelegate.sellOrder(instrument_token, quantity);
-            this.setState({ dataStreamConnected: !this.state.dataStreamConnected });
-            const response = {};
-
-      console.log('Sell order response:', response);
+      await _tradeDelegate.closeAllPositions();
+      const atmPut = _tradeDelegate.getATMOption('PUT', _tradeDelegate._ltp);
+      if (atmPut) {
+        const quantity = atmPut.lot_size;
+        const response = await _tradeDelegate.buyOrder(atmPut.instrument_token, quantity);
+        console.log('Sell order response:', response);
+        this.setPositionStatus(2);
+      } else {
+        console.error('No ATM PUT option found');
+      }
     } catch (error) {
       console.error('Sell order failed:', error);
     }
@@ -129,12 +133,9 @@ class AutoTrader extends React.Component {
 
   async handleCloseAll() {
     try {
-     // const response = await _tradeDelegate.closeAllPositions();
-           const response = {};
-           this._tester += 1;
-           this.setPositionStatus(this._tester % 3);
-
+      const response = await _tradeDelegate.closeAllPositions();
       console.log('Close all positions response:', response);
+      this.setPositionStatus(0);
     } catch (error) {
       console.error('Close all positions failed:', error);
     }
@@ -142,15 +143,30 @@ class AutoTrader extends React.Component {
 
   async handleReverse() {
     try {
-      // Placeholder: reverse logic, e.g., if current position is CALL, sell (PUT), else buy (CALL)
-      // const currentPos = _tradeDelegate.currentPosition;
-      // if (currentPos === 'CALL') {
-      //   await this.handleSell();
-      // } else if (currentPos === 'PUT') {
-      //   await this.handleBuy();
-      // } else {
+      await _tradeDelegate.closeAllPositions();
+      if (this.state.positionStatus === 1) {
+        const atmPut = _tradeDelegate.getATMOption('PUT', _tradeDelegate._ltp);
+        if (atmPut) {
+          const quantity = atmPut.lot_size;
+          const response = await _tradeDelegate.buyOrder(atmPut.instrument_token, quantity);
+          console.log('Reverse to PUT buy order response:', response);
+          this.setPositionStatus(2);
+        } else {
+          console.error('No ATM PUT option found for reverse');
+        }
+      } else if (this.state.positionStatus === 2) {
+        const atmCall = _tradeDelegate.getATMOption('CALL', _tradeDelegate._ltp);
+        if (atmCall) {
+          const quantity = atmCall.lot_size;
+          const response = await _tradeDelegate.buyOrder(atmCall.instrument_token, quantity);
+          console.log('Reverse to CALL buy order response:', response);
+          this.setPositionStatus(1);
+        } else {
+          console.error('No ATM CALL option found for reverse');
+        }
+      } else {
         console.log('No position to reverse');
-      
+      }
     } catch (error) {
       console.error('Reverse failed:', error);
     }
@@ -284,6 +300,7 @@ class AutoTrader extends React.Component {
             <button
               onClick={this.handleBuy}
               className="button"
+              disabled={this.state.positionStatus !== 0}
               style={{
                 padding: "1rem 2rem",
                 fontSize: "2.4vw",
@@ -291,7 +308,7 @@ class AutoTrader extends React.Component {
                 color: "black",
                 border: "none",
                 borderRadius: "0.25rem",
-                cursor: "pointer",
+                cursor: this.state.positionStatus !== 0 ? 'not-allowed' : 'pointer',
                 minWidth: "160px",
               }}
             >
@@ -300,6 +317,7 @@ class AutoTrader extends React.Component {
             <button
               onClick={this.handleSell}
               className="button"
+              disabled={this.state.positionStatus !== 0}
               style={{
                 padding: "1rem 2rem",
                 fontSize: "2.4vw",
@@ -307,7 +325,7 @@ class AutoTrader extends React.Component {
                 color: "white",
                 border: "none",
                 borderRadius: "0.25rem",
-                cursor: "pointer",
+                cursor: this.state.positionStatus !== 0 ? 'not-allowed' : 'pointer',
                 minWidth: "160px",
               }}
             >
@@ -332,6 +350,7 @@ class AutoTrader extends React.Component {
             <button
               onClick={this.handleReverse}
               className="button"
+              disabled={this.state.positionStatus === 0}
               style={{
                 padding: "1rem 2rem",
                 fontSize: "2.4vw",
@@ -339,7 +358,7 @@ class AutoTrader extends React.Component {
                 color: "white",
                 border: "none",
                 borderRadius: "0.25rem",
-                cursor: "pointer",
+                cursor: this.state.positionStatus === 0 ? 'not-allowed' : 'pointer',
                 minWidth: "160px",
               }}
             >

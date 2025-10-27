@@ -1,4 +1,4 @@
-// No React import needed
+import { useEffect, useState } from "react";
 import proto from "./MarketDataFeedV3.proto";
 import { Buffer } from "buffer";
 const protobuf = require("protobufjs");
@@ -39,9 +39,8 @@ const blobToArrayBuffer = async (blob) => {
   });
 };
 
-
 // Decode Protobuf messages
-function decodeProfobuf(buffer) {
+const decodeProfobuf = (buffer) => {
   if (!protobufRoot) {
     console.warn("Protobuf part not initialized yet!");
     return null;
@@ -50,44 +49,41 @@ function decodeProfobuf(buffer) {
     "com.upstox.marketdatafeederv3udapi.rpc.proto.FeedResponse"
   );
   return FeedResponse.decode(buffer);
-}
+};
 
+// MarketDataFeed class for OOP approach
 class MarketDataFeed {
-  static decodeProfobuf(buffer) {
-    return decodeProfobuf(buffer);
-  }
-  constructor() {
-    this.isConnected = false;
-    this.feedData = [];
-    this.ws = null;
-    this.instrumentKeys = [];
-  }
-
-  async init(token, instrumentKeys = []) {
-    await initProtobuf();
+  constructor(token, onDataCallback, instrumentKeys, onConnect, onDisconnect) {
+    this.token = token;
+    this.onData = onDataCallback;
     this.instrumentKeys = instrumentKeys;
-    await this.connectWebSocket(token);
+    this.onConnect = onConnect;
+    this.onDisconnect = onDisconnect;
+    this.ws = null;
+    this.isConnected = false;
+    this.init();
   }
 
-  close() {
-    if (this.ws) {
-      this.ws.close();
-    }
+  async init() {
+    await initProtobuf();
+    this.connect();
   }
 
-  async connectWebSocket(token) {
+  async connect() {
     try {
-      const wsUrl = await getUrl(token);
+      const wsUrl = await getUrl(this.token);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         this.isConnected = true;
+        console.log("Connected");
+        this.onConnect?.();
         const data = {
           guid: "someguid",
           method: "sub",
           data: {
             mode: "ltpc",
-            instrumentKeys: this.instrumentKeys.length > 0 ? this.instrumentKeys : ["NSE_EQ|INE669E01016"],
+            instrumentKeys: this.instrumentKeys,
           },
         };
         this.ws.send(Buffer.from(JSON.stringify(data)));
@@ -95,23 +91,52 @@ class MarketDataFeed {
 
       this.ws.onclose = () => {
         this.isConnected = false;
+        console.log("Disconnected");
+        this.onDisconnect?.();
       };
 
-      this.ws.onmessage = async (event) => {
-        const arrayBuffer = await blobToArrayBuffer(event.data);
-        let buffer = Buffer.from(arrayBuffer);
-        let response = decodeProfobuf(buffer);
-        this.feedData.push(JSON.stringify(response));
-      };
+      this.ws.onmessage = (event) => this.handleMessage(event);
 
       this.ws.onerror = (error) => {
         this.isConnected = false;
+        console.log("WebSocket error:", error);
+        this.onDisconnect?.();
       };
     } catch (error) {
-      // Optionally keep a single error log
-      console.error('[MarketDataFeed] WebSocket connection error:', error);
+      console.error("WebSocket connection error:", error);
+    }
+  }
+
+  async handleMessage(event) {
+    const arrayBuffer = await blobToArrayBuffer(event.data);
+    let buffer = Buffer.from(arrayBuffer);
+    let response = decodeProfobuf(buffer);
+    if (this.onData) {
+      this.onData(JSON.stringify(response));
+    }
+  }
+
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
     }
   }
 }
 
-export default MarketDataFeed;
+// Hook to use the MarketDataFeed class
+function useMarketDataFeed(token, instrumentKeys) {
+  const [feedData, setFeedData] = useState([]);
+
+  useEffect(() => {
+    const manager = new MarketDataFeed(token, (data) => {
+      setFeedData((currentData) => [...currentData, data]);
+    }, instrumentKeys);
+
+    return () => manager.disconnect();
+  }, [token, instrumentKeys]);
+
+  return { feedData };
+}
+
+export default useMarketDataFeed;
+export { MarketDataFeed };

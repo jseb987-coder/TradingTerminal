@@ -7,6 +7,7 @@ class TradeDelegate {
         this.apiManager = new APIManager();
         this.apiManager.initialize(token,symbol);
         this._symbolName = symbol;
+        this._ltp = null;
     }
 
       async setupCalls() {
@@ -98,6 +99,10 @@ class TradeDelegate {
             this._expiryDate = nearestDate;
             this._optionDataOfNearestExpiry = nearestOptions;
 
+            // Precompute sorted ATM options for efficiency
+            this.atmCalls = nearestOptions.filter(o => o.instrument_type === 'CE').sort((a, b) => a.strike_price - b.strike_price);
+            this.atmPuts = nearestOptions.filter(o => o.instrument_type === 'PE').sort((a, b) => a.strike_price - b.strike_price);
+
             if(this._expiryDate) {
                 console.log(`[TradeDelegate] Nearest expiry option data loaded for date: ${this._expiryDate}`);
                 return true;
@@ -130,6 +135,31 @@ class TradeDelegate {
         } catch (error) {
             console.error('[TradeDelegate] Error fetching account balance:', error.message);
             return false;
+        }
+    }
+
+    getATMOption(type, currentLTP) {
+        const options = type === 'CALL' ? this.atmCalls : this.atmPuts;
+        if (!options || options.length === 0) return null;
+
+        if (type === 'CALL') {
+            // Find the CE with strike_price >= currentLTP, closest (smallest difference)
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].strike_price >= currentLTP) {
+                    return options[i];
+                }
+            }
+            // If none >=, return the highest strike
+            return options[options.length - 1];
+        } else {
+            // Find the PE with strike_price <= currentLTP, closest (largest strike)
+            for (let i = options.length - 1; i >= 0; i--) {
+                if (options[i].strike_price <= currentLTP) {
+                    return options[i];
+                }
+            }
+            // If none <=, return the lowest strike
+            return options[0];
         }
     }
 

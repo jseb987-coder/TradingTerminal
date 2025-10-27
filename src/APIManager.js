@@ -80,6 +80,17 @@ class APIManager {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    async getOptionChain() {
+        const instrumentKey = encodeURIComponent(this._symbol);
+        const url = `https://api.upstox.com/v2/option/contract?instrument_key=${instrumentKey}`;
+        return this.getUrl(url);
+    }
+
+    async getPositions() {
+    const url = 'https://api.upstox.com/v2/portfolio/short-term-positions';
+    return this.getUrl(url);
+  }
+
     buildHeaders(accessToken) {
         return {
             'Content-Type': 'application/json',
@@ -130,7 +141,7 @@ class APIManager {
         const url = 'https://api-hft.upstox.com/v3/order/place';
         const data = {
             "quantity": quantity,
-            "product": "D", // D for Delivery
+            "product": "I", // I for Intraday
             "validity": "DAY",
             "instrument_token": instrument_token,
             "order_type": "MARKET",
@@ -153,58 +164,12 @@ class APIManager {
         }
     }
 
-    async buyOrder(instrument_token, quantity) {   //quantity in lots
-        // Cancel conflicting orders
-        if (this.sellOrderCancelSource) {
-            this.sellOrderCancelSource.cancel('Buy order initiated');
-        }
-        if (this.currentPosition === null) {
-            if (this.buyOrderCancelSource) {
-                this.buyOrderCancelSource.cancel('New buy order');
-            }
-        } else {
-            // Already in position, cancel both
-            if (this.buyOrderCancelSource) {
-                this.buyOrderCancelSource.cancel('Already in position');
-            }
-            if (this.sellOrderCancelSource) {
-                this.sellOrderCancelSource.cancel('Already in position');
-            }
-        }
-        this.buyOrderCancelSource = axios.CancelToken.source();
-        this.currentPosition = 'CALL';
-        return this.placeOrder(instrument_token, quantity, "BUY", { cancelToken: this.buyOrderCancelSource.token });
+    async buyOrder(instrument_token, quantity) {
+        return this.placeOrder(instrument_token, quantity, "BUY");
     }
 
     async sellOrder(instrument_token, quantity) {
-        // Cancel conflicting orders
-        if (this.buyOrderCancelSource) {
-            this.buyOrderCancelSource.cancel('Sell order initiated');
-        }
-        if (this.currentPosition === null) {
-            if (this.sellOrderCancelSource) {
-                this.sellOrderCancelSource.cancel('New sell order');
-            }
-        } else {
-            // Already in position, cancel both
-            if (this.buyOrderCancelSource) {
-                this.buyOrderCancelSource.cancel('Already in position');
-            }
-            if (this.sellOrderCancelSource) {
-                this.sellOrderCancelSource.cancel('Already in position');
-            }
-        }
-        this.sellOrderCancelSource = axios.CancelToken.source();
-        this.currentPosition = 'PUT';
-        return this.placeOrder(instrument_token, quantity, "BUY", { cancelToken: this.sellOrderCancelSource.token });
-    }
-
-    getAccountBalance(segment = null) {
-        let url = 'https://api.upstox.com/v2/user/get-funds-and-margin';
-        if (segment) {
-            url += `?segment=${segment}`;
-        }
-        return this.getUrl(url);
+        return this.placeOrder(instrument_token, quantity, "SELL");
     }
 
    
