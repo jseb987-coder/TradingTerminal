@@ -1,6 +1,6 @@
 import React from "react";
 import TradeDelegate from "./TradeDelegate";
-import { MarketDataFeed } from "./socket/MarketDataFeed";
+import MarketDataFeed from "./socket/MarketDataFeed";
 
 const _tradeDelegate = new TradeDelegate();
 const SYMBOL_NAME = "NSE_INDEX|Nifty 50";
