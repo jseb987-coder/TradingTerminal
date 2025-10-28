@@ -15,6 +15,7 @@ function App() {
     e.preventDefault();
     if (authCode.trim() !== "") {
       setIsAuthenticated(true);
+      console.log("Ann mary is an oola")
     }
   };
 
