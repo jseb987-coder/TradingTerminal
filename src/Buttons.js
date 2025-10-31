@@ -39,7 +39,7 @@ class BuyButton extends Button {
       const atmCall = this.tradeDelegate.getATMOption('CALL', this.tradeDelegate.getLtp());
       if (atmCall) {
         const quantity = atmCall.lot_size;
-        const response = await this.tradeDelegate.buyOrder(atmCall.instrument_token, quantity);
+        const response = await this.tradeDelegate.buyOrder(atmCall.instrument_key, quantity);
         console.log('Buy order response:', response);
         
         // Only update position status if order was successful
@@ -82,7 +82,7 @@ class SellButton extends Button {
       const atmPut = this.tradeDelegate.getATMOption('PUT', this.tradeDelegate.getLtp());
       if (atmPut) {
         const quantity = atmPut.lot_size;
-        const response = await this.tradeDelegate.buyOrder(atmPut.instrument_token, quantity);
+        const response = await this.tradeDelegate.buyOrder(atmPut.instrument_key, quantity);
         console.log('Sell order response:', response);
         
         // Only update position status if order was successful
@@ -149,6 +149,10 @@ class CloseButton extends Button {
       color: "black",
     };
   }
+
+  isDisabled(positionStatus) {
+    return positionStatus === 0;
+  }
 }
 
 class ReverseButton extends Button {
@@ -166,7 +170,7 @@ class ReverseButton extends Button {
         const atmPut = this.tradeDelegate.getATMOption('PUT', this.tradeDelegate.getLtp());
         if (atmPut) {
           const quantity = atmPut.lot_size;
-          const response = await this.tradeDelegate.buyOrder(atmPut.instrument_token, quantity);
+          const response = await this.tradeDelegate.buyOrder(atmPut.instrument_key, quantity);
           console.log('Reverse to PUT buy order response:', response);
           
           // Only update position status if order was successful
@@ -182,7 +186,7 @@ class ReverseButton extends Button {
         const atmCall = this.tradeDelegate.getATMOption('CALL', this.tradeDelegate.getLtp());
         if (atmCall) {
           const quantity = atmCall.lot_size;
-          const response = await this.tradeDelegate.buyOrder(atmCall.instrument_token, quantity);
+          const response = await this.tradeDelegate.buyOrder(atmCall.instrument_key, quantity);
           console.log('Reverse to CALL buy order response:', response);
           
           // Only update position status if order was successful
