@@ -1,6 +1,7 @@
 import React from "react";
 import TradeDelegate from "./TradeDelegate";
 import MarketDataFeed from "./socket/MarketDataFeed";
+import { BuyButton, SellButton, CloseButton, ReverseButton } from "./Buttons";
 
 const _tradeDelegate = new TradeDelegate();
 const SYMBOL_NAME = "NSE_INDEX|Nifty 50";
@@ -17,14 +18,16 @@ class AutoTrader extends React.Component {
     this.token = props.token;
     this.handleOnline = this.handleOnline.bind(this);
     this.handleOffline = this.handleOffline.bind(this);
-    this.handleBuy = this.handleBuy.bind(this);
-    this.handleSell = this.handleSell.bind(this);
-    this.handleCloseAll = this.handleCloseAll.bind(this);
-    this.handleReverse = this.handleReverse.bind(this);
     this.setPositionStatus = this.setPositionStatus.bind(this);
     this.marketDataFeed = null;
     this._tester = 0;
     this.handleMarketData = this.handleMarketData.bind(this);
+
+    // Initialize button instances
+    this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this));
+    this.sellButton = new SellButton(_tradeDelegate, this.setPositionStatus.bind(this));
+    this.closeButton = new CloseButton(_tradeDelegate, this.setPositionStatus.bind(this));
+    this.reverseButton = new ReverseButton(_tradeDelegate, this.setPositionStatus.bind(this), () => this.state.positionStatus);
   }
 
   async setUpMarketFeed(token, symbol) {
@@ -82,6 +85,36 @@ class AutoTrader extends React.Component {
     this.setState({ positionStatus: value });
   }
 
+  renderButton(button) {
+    const isDisabled = button.isDisabled(this.state.positionStatus);
+    const cursor = button.getCursor(this.state.positionStatus);
+    const baseStyle = button.getStyle();
+    const style = isDisabled
+      ? {
+          ...baseStyle,
+          cursor,
+          opacity: 0.5,
+          filter: 'grayscale(50%)',
+          transform: 'none',
+        }
+      : {
+          ...baseStyle,
+          cursor,
+        };
+
+    return (
+      <button
+        key={button.getLabel()}
+        onClick={() => button.execute()}
+        className="button"
+        disabled={isDisabled}
+        style={style}
+      >
+        {button.getLabel()}
+      </button>
+    );
+  }
+
   handleMarketData(data) {
     try {
       const parsed = JSON.parse(data);
@@ -94,81 +127,6 @@ class AutoTrader extends React.Component {
       }
     } catch (error) {
       console.error('Error parsing market data:', error);
-    }
-  }
-
-  async handleBuy() {
-    try {
-      await _tradeDelegate.closeAllPositions();
-      const atmCall = _tradeDelegate.getATMOption('CALL', _tradeDelegate._ltp);
-      if (atmCall) {
-        const quantity = atmCall.lot_size;
-        const response = await _tradeDelegate.buyOrder(atmCall.instrument_token, quantity);
-        console.log('Buy order response:', response);
-        this.setPositionStatus(1);
-      } else {
-        console.error('No ATM CALL option found');
-      }
-    } catch (error) {
-      console.error('Buy order failed:', error);
-    }
-  }
-
-  async handleSell() {
-    try {
-      await _tradeDelegate.closeAllPositions();
-      const atmPut = _tradeDelegate.getATMOption('PUT', _tradeDelegate._ltp);
-      if (atmPut) {
-        const quantity = atmPut.lot_size;
-        const response = await _tradeDelegate.buyOrder(atmPut.instrument_token, quantity);
-        console.log('Sell order response:', response);
-        this.setPositionStatus(2);
-      } else {
-        console.error('No ATM PUT option found');
-      }
-    } catch (error) {
-      console.error('Sell order failed:', error);
-    }
-  }
-
-  async handleCloseAll() {
-    try {
-      const response = await _tradeDelegate.closeAllPositions();
-      console.log('Close all positions response:', response);
-      this.setPositionStatus(0);
-    } catch (error) {
-      console.error('Close all positions failed:', error);
-    }
-  }
-
-  async handleReverse() {
-    try {
-      await _tradeDelegate.closeAllPositions();
-      if (this.state.positionStatus === 1) {
-        const atmPut = _tradeDelegate.getATMOption('PUT', _tradeDelegate._ltp);
-        if (atmPut) {
-          const quantity = atmPut.lot_size;
-          const response = await _tradeDelegate.buyOrder(atmPut.instrument_token, quantity);
-          console.log('Reverse to PUT buy order response:', response);
-          this.setPositionStatus(2);
-        } else {
-          console.error('No ATM PUT option found for reverse');
-        }
-      } else if (this.state.positionStatus === 2) {
-        const atmCall = _tradeDelegate.getATMOption('CALL', _tradeDelegate._ltp);
-        if (atmCall) {
-          const quantity = atmCall.lot_size;
-          const response = await _tradeDelegate.buyOrder(atmCall.instrument_token, quantity);
-          console.log('Reverse to CALL buy order response:', response);
-          this.setPositionStatus(1);
-        } else {
-          console.error('No ATM CALL option found for reverse');
-        }
-      } else {
-        console.log('No position to reverse');
-      }
-    } catch (error) {
-      console.error('Reverse failed:', error);
     }
   }
 
@@ -285,7 +243,7 @@ class AutoTrader extends React.Component {
             {positionText}
           </div>
         )}
-        {this.state.isConnected && (
+        {this.state.backendConnected && (
           <div
             style={{
               marginTop: "2rem",
@@ -297,73 +255,10 @@ class AutoTrader extends React.Component {
               zIndex: 1,
             }}
           >
-            <button
-              onClick={this.handleBuy}
-              className="button"
-              disabled={this.state.positionStatus !== 0}
-              style={{
-                padding: "1rem 2rem",
-                fontSize: "2.4vw",
-                backgroundColor: "limegreen",
-                color: "black",
-                border: "none",
-                borderRadius: "0.25rem",
-                cursor: this.state.positionStatus !== 0 ? 'not-allowed' : 'pointer',
-                minWidth: "160px",
-              }}
-            >
-              Buy
-            </button>
-            <button
-              onClick={this.handleSell}
-              className="button"
-              disabled={this.state.positionStatus !== 0}
-              style={{
-                padding: "1rem 2rem",
-                fontSize: "2.4vw",
-                backgroundColor: "red",
-                color: "white",
-                border: "none",
-                borderRadius: "0.25rem",
-                cursor: this.state.positionStatus !== 0 ? 'not-allowed' : 'pointer',
-                minWidth: "160px",
-              }}
-            >
-              Sell
-            </button>
-            <button
-              onClick={this.handleCloseAll}
-              className="button"
-              style={{
-                padding: "1rem 2rem",
-                fontSize: "2.4vw",
-                backgroundColor: "orange",
-                color: "black",
-                border: "none",
-                borderRadius: "0.25rem",
-                cursor: "pointer",
-                minWidth: "160px",
-              }}
-            >
-              Close All
-            </button>
-            <button
-              onClick={this.handleReverse}
-              className="button"
-              disabled={this.state.positionStatus === 0}
-              style={{
-                padding: "1rem 2rem",
-                fontSize: "2.4vw",
-                backgroundColor: "blue",
-                color: "white",
-                border: "none",
-                borderRadius: "0.25rem",
-                cursor: this.state.positionStatus === 0 ? 'not-allowed' : 'pointer',
-                minWidth: "160px",
-              }}
-            >
-              Reverse
-            </button>
+            {this.renderButton(this.buyButton)}
+            {this.renderButton(this.sellButton)}
+            {this.renderButton(this.closeButton)}
+            {this.renderButton(this.reverseButton)}
           </div>
         )}
       </div>

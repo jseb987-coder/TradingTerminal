@@ -79,6 +79,10 @@ class TradeDelegate {
         this._ltp = ltp;
     }
 
+    getLtp() {
+        return this._ltp;
+    }
+
 
     async calculateNearestExpiryDate() {
         try {
