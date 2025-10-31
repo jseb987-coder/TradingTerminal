@@ -1,6 +1,7 @@
 import React from "react";
 import TradeDelegate from "./TradeDelegate";
 import MarketDataFeed from "./socket/MarketDataFeed";
+import OrderDataFeed from "./socket/OrderDataFeed";
 import { BuyButton, SellButton, CloseButton, ReverseButton } from "./Buttons";
 
 const _tradeDelegate = new TradeDelegate();
@@ -13,6 +14,7 @@ class AutoTrader extends React.Component {
       isConnected: navigator.onLine,
       backendConnected: false,
       dataStreamConnected: false,
+      orderStreamConnected: false,
       positionStatus: 0,
       isBusy: false
     };
@@ -21,9 +23,11 @@ class AutoTrader extends React.Component {
     this.handleOffline = this.handleOffline.bind(this);
     this.setPositionStatus = this.setPositionStatus.bind(this);
     this.setBusy = this.setBusy.bind(this);
-    this.marketDataFeed = null;
+  this.marketDataFeed = null;
+  this.orderDataFeed = null;
     this._tester = 0;
-    this.handleMarketData = this.handleMarketData.bind(this);
+  this.handleMarketData = this.handleMarketData.bind(this);
+  this.handleOrderData = this.handleOrderData.bind(this);
 
     // Initialize button instances
     this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
@@ -34,6 +38,10 @@ class AutoTrader extends React.Component {
 
   async setUpMarketFeed(token, symbol) {
     this.marketDataFeed = new MarketDataFeed(token, this.handleMarketData, [symbol], () => this.setState({ dataStreamConnected: true }), () => this.setState({ dataStreamConnected: false }));
+  }
+
+  async setUpOrderFeed(token) {
+    this.orderDataFeed = new OrderDataFeed(token, this.handleOrderData, () => this.setState({ orderStreamConnected: true }), () => this.setState({ orderStreamConnected: false }));
   }
 
   
@@ -67,6 +75,7 @@ class AutoTrader extends React.Component {
     const backendOk = await this.setUpAutoTrader();
     if (backendOk) {
       await this.setUpMarketFeed(this.token, SYMBOL_NAME);
+      await this.setUpOrderFeed(this.token);
     }
   }
 
@@ -133,6 +142,17 @@ class AutoTrader extends React.Component {
       }
     } catch (error) {
       console.error('Error parsing market data:', error);
+    }
+  }
+
+  handleOrderData(data) {
+    try {
+      console.log('Order feed message:', data);
+      // If you want to parse JSON and act on order updates, do it here
+      // const parsed = JSON.parse(data);
+      // console.log('Parsed order update:', parsed);
+    } catch (error) {
+      console.error('Error handling order data:', error);
     }
   }
 
@@ -213,6 +233,19 @@ class AutoTrader extends React.Component {
                 }}
               ></span>
               Data Stream
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: this.state.orderStreamConnected ? 'limegreen' : 'red',
+                  marginRight: '0.5rem',
+                }}
+              ></span>
+              Order Stream
             </div>
           </div>
         )}

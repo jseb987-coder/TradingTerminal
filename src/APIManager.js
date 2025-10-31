@@ -169,7 +169,7 @@ class APIManager {
     }
 
     async sellOrder(instrument_token, quantity) {
-        return this.placeOrder(instrument_token, quantity, "SELL");
+        return this.placeOrder(instrument_token, quantity, "BUY");   //BOTH ARE buy ONLY. One is call other put
     }
 
    
