@@ -145,12 +145,75 @@ class AutoTrader extends React.Component {
     }
   }
 
-  handleOrderData(data) {
+  async handleOrderData(data) {
+    // The feed may sometimes send multiple JSON objects concatenated. Extract balanced JSON objects.
+    const extractJsonObjects = (str) => {
+      const objs = [];
+      let depth = 0;
+      let start = -1;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === '{') {
+          if (depth === 0) start = i;
+          depth++;
+        } else if (ch === '}') {
+          depth--;
+          if (depth === 0 && start !== -1) {
+            objs.push(str.slice(start, i + 1));
+            start = -1;
+          }
+        }
+      }
+      return objs;
+    };
+
     try {
-      console.log('Order feed message:', data);
-      // If you want to parse JSON and act on order updates, do it here
-      // const parsed = JSON.parse(data);
-      // console.log('Parsed order update:', parsed);
+      console.log('Order feed raw message:', data);
+      const payloads = extractJsonObjects(data.toString());
+      if (payloads.length === 0) {
+        // Fallback: try single JSON parse
+        try {
+          const obj = JSON.parse(data);
+          payloads.push(JSON.stringify(obj));
+        } catch (e) {
+          console.warn('No JSON objects found in order feed message');
+        }
+      }
+
+      for (const p of payloads) {
+        let msg = null;
+        try {
+          msg = JSON.parse(p);
+        } catch (err) {
+          console.warn('Failed to parse order feed JSON part:', err.message);
+          continue;
+        }
+
+        // Basic logging
+        console.log('Order feed parsed message:', msg);
+
+        // If this is an order update and it's rejected, refresh positions and update UI
+        if (msg && (msg.update_type === 'order' || msg.updateType === 'order')) {
+          const status = (msg.status || '').toString().toLowerCase();
+          if (status.includes('reject')) {
+            console.warn('Order rejected detected from feed, refreshing positions...');
+            try {
+              const ok = await _tradeDelegate.calculatePositionDetails();
+              if (ok) {
+                const cp = _tradeDelegate.currentPosition;
+                if (cp === 'CALL') this.setPositionStatus(1);
+                else if (cp === 'PUT') this.setPositionStatus(2);
+                else this.setPositionStatus(0);
+              } else {
+                // If calculation failed, set to no positions to be safe
+                this.setPositionStatus(0);
+              }
+            } catch (err) {
+              console.error('Error refreshing positions after order rejection:', err);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error handling order data:', error);
     }
