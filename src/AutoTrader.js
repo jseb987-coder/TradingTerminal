@@ -40,9 +40,9 @@ class AutoTrader extends React.Component {
       const backendOk = await _tradeDelegate.setupCalls();
       if (backendOk) {
         this.setState({ backendConnected: true });
-        if (_tradeDelegate._currentPosition === 'CALL') {
+        if (_tradeDelegate.currentPosition === 'CALL') {
           this.setPositionStatus(1);
-        } else if (_tradeDelegate._currentPosition === 'PUT') {
+        } else if (_tradeDelegate.currentPosition === 'PUT') {
           this.setPositionStatus(2);
         }
       } else {
@@ -88,7 +88,7 @@ class AutoTrader extends React.Component {
       const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
       if (ltp !== undefined) {
         console.log('LTP:', ltp);
-        _tradeDelegate._ltp = ltp;
+        _tradeDelegate.setLtp(ltp);
       } else {
         console.log('LTP not available in data');
       }

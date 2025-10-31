@@ -71,6 +71,14 @@ class TradeDelegate {
         }
     }
 
+    get currentPosition() {
+        return this._currentPosition;
+    }
+
+    setLtp(ltp) {
+        this._ltp = ltp;
+    }
+
 
     async calculateNearestExpiryDate() {
         try {

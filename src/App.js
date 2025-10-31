@@ -5,7 +5,7 @@ import AutoTrader from "./AutoTrader";
 import "./App.css";
 
 function App() {
-  const [authCode, setAuthCode] = useState("eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzQUE1SlAiLCJqdGkiOiI2OGZmMjk5MTZmYzliMzVhNWEwNTJhNDAiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYxNTUyNzg1LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjE2MDI0MDB9.nbYY-RUxRfUA4hdMX5jvN3US6tkDzI-wErlvoHxNBK8");
+  const [authCode, setAuthCode] = useState("eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzQUE1SlAiLCJqdGkiOiI2OTA0MmVmMjRmZjMyMDdlMzQ4ZjM5YTIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYxODgxODQyLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjE5NDgwMDB9.QBLgKsAjggIqv8iOcwU7GlBcauro9ztttZAgreN0Lzg");
   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   // const [authCode, setAuthCode] = useState("");

@@ -74,14 +74,13 @@ class MarketDataFeed {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log("WebSocket opened successfully");
+        console.log("Connected");
         if (this.onConnect) this.onConnect();
-        const guid = crypto.randomUUID();
         const data = {
-          guid: guid,
-          method: "subscribe",
+          guid: "someguid",
+          method: "sub",
           data: {
-            mode: "full",
+            mode: "ltpc",
             instrumentKeys: this.instrumentKeys,
           },
         };
