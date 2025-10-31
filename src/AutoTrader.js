@@ -13,21 +13,23 @@ class AutoTrader extends React.Component {
       isConnected: navigator.onLine,
       backendConnected: false,
       dataStreamConnected: false,
-      positionStatus: 0
+      positionStatus: 0,
+      isBusy: false
     };
     this.token = props.token;
     this.handleOnline = this.handleOnline.bind(this);
     this.handleOffline = this.handleOffline.bind(this);
     this.setPositionStatus = this.setPositionStatus.bind(this);
+    this.setBusy = this.setBusy.bind(this);
     this.marketDataFeed = null;
     this._tester = 0;
     this.handleMarketData = this.handleMarketData.bind(this);
 
     // Initialize button instances
-    this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this));
-    this.sellButton = new SellButton(_tradeDelegate, this.setPositionStatus.bind(this));
-    this.closeButton = new CloseButton(_tradeDelegate, this.setPositionStatus.bind(this));
-    this.reverseButton = new ReverseButton(_tradeDelegate, this.setPositionStatus.bind(this), () => this.state.positionStatus);
+    this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
+    this.sellButton = new SellButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
+    this.closeButton = new CloseButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
+    this.reverseButton = new ReverseButton(_tradeDelegate, this.setPositionStatus.bind(this), () => this.state.positionStatus, this.setBusy.bind(this));
   }
 
   async setUpMarketFeed(token, symbol) {
@@ -85,9 +87,13 @@ class AutoTrader extends React.Component {
     this.setState({ positionStatus: value });
   }
 
+  setBusy(isBusy) {
+    this.setState({ isBusy });
+  }
+
   renderButton(button) {
-    const isDisabled = button.isDisabled(this.state.positionStatus);
-    const cursor = button.getCursor(this.state.positionStatus);
+    const isDisabled = button.isDisabled(this.state.positionStatus) || this.state.isBusy;
+    const cursor = button.getCursor(this.state.positionStatus, this.state.isBusy);
     const baseStyle = button.getStyle();
     const style = isDisabled
       ? {

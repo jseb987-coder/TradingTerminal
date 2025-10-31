@@ -1,7 +1,8 @@
 class Button {
-  constructor(tradeDelegate, setPositionStatus) {
+  constructor(tradeDelegate, setPositionStatus, setBusy) {
     this.tradeDelegate = tradeDelegate;
     this.setPositionStatus = setPositionStatus;
+    this.setBusy = setBusy;
   }
 
   async execute() {
@@ -26,14 +27,15 @@ class Button {
     return false;
   }
 
-  getCursor(positionStatus) {
-    return this.isDisabled(positionStatus) ? 'not-allowed' : 'pointer';
+  getCursor(positionStatus, isBusy = false) {
+    return (this.isDisabled(positionStatus) || isBusy) ? 'not-allowed' : 'pointer';
   }
 }
 
 class BuyButton extends Button {
   async execute() {
     try {
+      this.setBusy(true);
       const atmCall = this.tradeDelegate.getATMOption('CALL', this.tradeDelegate.getLtp());
       if (atmCall) {
         const quantity = atmCall.lot_size;
@@ -51,6 +53,8 @@ class BuyButton extends Button {
       }
     } catch (error) {
       console.error('Buy order failed:', error);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -74,6 +78,7 @@ class BuyButton extends Button {
 class SellButton extends Button {
   async execute() {
     try {
+      this.setBusy(true);
       const atmPut = this.tradeDelegate.getATMOption('PUT', this.tradeDelegate.getLtp());
       if (atmPut) {
         const quantity = atmPut.lot_size;
@@ -91,6 +96,8 @@ class SellButton extends Button {
       }
     } catch (error) {
       console.error('Sell order failed:', error);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -114,6 +121,7 @@ class SellButton extends Button {
 class CloseButton extends Button {
   async execute() {
     try {
+      this.setBusy(true);
       const response = await this.tradeDelegate.closeAllPositions();
       console.log('Close all positions response:', response);
       
@@ -125,6 +133,8 @@ class CloseButton extends Button {
       }
     } catch (error) {
       console.error('Close all positions failed:', error);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -142,13 +152,14 @@ class CloseButton extends Button {
 }
 
 class ReverseButton extends Button {
-  constructor(tradeDelegate, setPositionStatus, getPositionStatus) {
-    super(tradeDelegate, setPositionStatus);
+  constructor(tradeDelegate, setPositionStatus, getPositionStatus, setBusy) {
+    super(tradeDelegate, setPositionStatus, setBusy);
     this.getPositionStatus = getPositionStatus;
   }
 
   async execute() {
     try {
+      this.setBusy(true);
       await this.tradeDelegate.closeAllPositions();
       const currentPosition = this.getPositionStatus();
       if (currentPosition === 1) {
@@ -188,6 +199,8 @@ class ReverseButton extends Button {
       }
     } catch (error) {
       console.error('Reverse failed:', error);
+    } finally {
+      this.setBusy(false);
     }
   }
 
