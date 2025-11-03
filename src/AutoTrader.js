@@ -2,6 +2,7 @@ import React from "react";
 import TradeDelegate from "./TradeDelegate";
 import MarketDataFeed from "./socket/MarketDataFeed";
 import OrderDataFeed from "./socket/OrderDataFeed";
+import Settings from './Settings';
 import { BuyButton, SellButton, CloseButton, ReverseButton } from "./Buttons";
 
 const _tradeDelegate = new TradeDelegate();
@@ -15,6 +16,7 @@ class AutoTrader extends React.Component {
       backendConnected: false,
       dataStreamConnected: false,
       orderStreamConnected: false,
+      showSettings: false,
       positionStatus: 0,
       isBusy: false
     };
@@ -28,6 +30,7 @@ class AutoTrader extends React.Component {
     this._tester = 0;
   this.handleMarketData = this.handleMarketData.bind(this);
   this.handleOrderData = this.handleOrderData.bind(this);
+  this.toggleSettings = this.toggleSettings.bind(this);
 
     // Initialize button instances
     this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
@@ -98,6 +101,10 @@ class AutoTrader extends React.Component {
 
   setBusy(isBusy) {
     this.setState({ isBusy });
+  }
+
+  toggleSettings() {
+    this.setState((s) => ({ showSettings: !s.showSettings }));
   }
 
   renderButton(button) {
@@ -259,18 +266,46 @@ class AutoTrader extends React.Component {
             }
           `}
         </style>
-        {this.state.isConnected && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              zIndex: 2,
-              color: '#fff',
-              fontFamily: 'monospace',
-              fontSize: '1rem',
-            }}
-          >
+  {/* settings button will be rendered above the status indicators (right side) */}
+  {this.state.isConnected && (<>
+            <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 6 }}>
+              <button
+                onClick={this.toggleSettings}
+                title="Settings"
+                aria-label="Open settings"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#fff',
+                  padding: '10px',
+                  fontSize: '1.25rem',
+                  minWidth: 44,
+                  height: 44,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 8,
+                  cursor: 'pointer'
+                }}
+              >
+                ⚙
+              </button>
+            </div>
+
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(10px + 5vw + 12px)', // place below the responsive status text (10px top + 5vw font size + gap)
+                left: 16,
+                zIndex: 2,
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start'
+              }}
+            >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
               <span
                 style={{
@@ -311,7 +346,8 @@ class AutoTrader extends React.Component {
               Order Stream
             </div>
           </div>
-        )}
+        </>)}
+  {this.state.showSettings && <Settings onClose={this.toggleSettings} />}
         <span
           style={{
             color: statusColor,
