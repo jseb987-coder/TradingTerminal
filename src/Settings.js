@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 export default function Settings({ onClose }) {
   // Hardcoded balance for now
@@ -35,9 +35,20 @@ export default function Settings({ onClose }) {
   };
 
   const handleBacktest = () => {
-    console.log('Backtest started with values:', { balance, values });
+    // Format dates as YYYY/MM/DD when logging/backtesting
+    const fmt = (d) => {
+      if (!d) return '';
+      // input type=date gives YYYY-MM-DD, convert to YYYY/MM/DD
+      return d.replace(/-/g, '/');
+    };
+    console.log('Backtest started with values:', { balance, values, from: fmt(fromDate), to: fmt(toDate) });
     // Implement backtest integration later
   };
+
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const fromRef = useRef(null);
+  const toRef = useRef(null);
 
   return (
     <div style={styles.overlay} role="dialog" aria-modal="true" aria-label="Settings">
@@ -95,9 +106,61 @@ export default function Settings({ onClose }) {
         </div>
 
         <div style={styles.actions}>
-          <button onClick={handleBacktest} style={styles.secondary}>Backtest</button>
-          <div style={{ width: 8 }} />
-          <button onClick={handleSave} style={styles.primary}>Save</button>
+          <div style={styles.saveRow}>
+            <button onClick={handleSave} style={styles.primary}>Save</button>
+          </div>
+
+          <div style={styles.dateBacktestRow}>
+            <div style={styles.backtestHeading}>Backtest</div>
+            <div style={styles.dateGroupCentered}>
+              <label style={styles.dateLabel}>From</label>
+              <div style={styles.dateInputWrapper}>
+                <input
+                  ref={fromRef}
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  style={styles.dateInput}
+                  placeholder="2025/09/01"
+                />
+                <button
+                  type="button"
+                  aria-label="Open from date picker"
+                  onClick={() => { if (fromRef.current) { try { fromRef.current.showPicker && fromRef.current.showPicker(); } catch{} fromRef.current.focus(); } }}
+                  style={styles.calendarButton}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" style={styles.calendarSvg}>
+                    <path fill="currentColor" d="M7 10h5v5H7z" opacity="0.9" />
+                    <path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H5V9h14v9z" />
+                  </svg>
+                </button>
+              </div>
+
+              <label style={{ ...styles.dateLabel, marginLeft: 8 }}>To</label>
+              <div style={{ ...styles.dateInputWrapper, marginLeft: 4 }}>
+                <input
+                  ref={toRef}
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  style={styles.dateInput}
+                  placeholder="2025/09/01"
+                />
+                <button
+                  type="button"
+                  aria-label="Open to date picker"
+                  onClick={() => { if (toRef.current) { try { toRef.current.showPicker && toRef.current.showPicker(); } catch{} toRef.current.focus(); } }}
+                  style={styles.calendarButton}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" style={styles.calendarSvg}>
+                    <path fill="currentColor" d="M7 10h5v5H7z" opacity="0.9" />
+                    <path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H5V9h14v9z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <button onClick={handleBacktest} style={styles.secondary}>Backtest</button>
+          </div>
         </div>
       </div>
     </div>
@@ -124,12 +187,14 @@ const styles = {
     color: '#fff',
     borderRadius: 8,
     padding: '1rem',
+    position: 'relative',
     boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
   },
   header: {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: '12px',
     marginBottom: '0.75rem'
   },
   closeButton: {
@@ -137,14 +202,22 @@ const styles = {
     border: 'none',
     color: '#fff',
     fontSize: '1.2rem',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 20
   },
   content: {
     marginBottom: '1rem'
   },
   balanceRow: {
     marginBottom: '1rem',
-    fontSize: '1.05rem'
+    fontSize: '1.05rem',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '8px'
   },
   columns: {
     display: 'flex',
@@ -181,8 +254,78 @@ const styles = {
   },
   actions: {
     display: 'flex',
-    justifyContent: 'flex-end',
-    alignItems: 'center'
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  dateGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    marginRight: '0.5rem'
+  },
+  dateInput: {
+    width: 150,
+    padding: '0.35rem',
+    borderRadius: 4,
+    border: '1px solid #333',
+    background: '#111',
+    color: '#fff'
+  },
+  dateInputWrapper: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    background: '#111',
+    borderRadius: 4,
+    border: '1px solid #333',
+    padding: '2px'
+  },
+  calendarButton: {
+    background: 'transparent',
+    border: 'none',
+    color: '#fff',
+    padding: '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer'
+  },
+  calendarSvg: {
+    display: 'block'
+  },
+  backtestHeading: {
+    fontSize: '1rem',
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  dateLabel: {
+    color: '#ddd',
+    fontSize: '0.9rem',
+    marginRight: 6
+  },
+  dateGroupCentered: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem',
+    margin: '0.5rem 0'
+  },
+  saveRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '0.5rem'
+  },
+  backtestRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '0.5rem'
+  },
+  dateBacktestRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px'
   },
   primary: {
     padding: '0.5rem 1rem',
