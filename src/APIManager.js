@@ -217,43 +217,47 @@ class APIManager {
         return this.placeOrder(instrument_token, quantity, "BUY");   //BOTH ARE buy ONLY. One is call other put
     }
 
-     async getProxyUrl(url, callback = null, options = {}) {
-        const maxRetries = options.maxRetries ?? Infinity;
-        const baseDelay = options.baseDelay ?? 1000; // ms
-        const factor = options.factor ?? 2;
-        const maxDelay = options.maxDelay ?? 60000; // 1 minute
-
-        let attempt = 0;
-        while (attempt < maxRetries) {
-            try {
-                const response = await axios.get(url);
-                if (callback) callback(response.data);
-                return response.data;
-            } catch (error) {
-                const isNetworkError = !error.response;
-                if (!isNetworkError) {
-                    // Not a network error, so fail fast
-                    console.error(error?.response?.status ? `Error: ${error.response.status} - ${error.response.data}` : error.message);
-                    throw error;
-                }
-
-                attempt++;
-                const delay = Math.min(baseDelay * Math.pow(factor, attempt - 1), maxDelay);
-                console.warn(`[APIManager] Network error on GET ${url}. Retrying attempt ${attempt} in ${delay}ms...`);
-                await this._sleep(delay);
-            }
-        }
-        throw new Error(`[APIManager] GET ${url} failed after ${maxRetries} attempts.`);
-    }
+     
 
     async fetchNearestNiftyFutureName(options = {}) {
         const url = `${API_BASE}/api/nifty-future`;
         try {
-            const response = await this.getProxyUrl(url, null, options);
+            const response = await this.getUrl(url, null, options);
             return response ? response : null;
         } catch (error) {
             console.error('[APIManager.fetchNearestNiftyFutureName] Error:', error.message);
             return null;
+        }
+    }
+
+    // Fetch the current trade configuration from the local API and log the data
+    async fetchTradeConfig(options = {}) {
+        const url = `${API_BASE}/api/trade-config`;
+        try {
+            const response = await this.getUrl(url, null, options);
+            return response ? response : null;
+        } catch (error) {
+            console.error('[APIManager.fetchTradeConfig] Error:', error.message || error);
+            return null;
+        }
+    }
+
+    // Post/Update trade configuration to the local API
+    async postTradeConfig(data = {}, options = {}) {
+        const url = `${API_BASE}/api/trade-config`;
+        try {
+            const response = await this.postUrl(url, data, options);
+            console.log('[APIManager.postTradeConfig] response:', response);
+            return response;
+        } catch (error) {
+            // Mirror other POST error handling: log details and re-throw so callers
+            // can observe the failure (postUrl contains retry/cancel logic).
+            if (error.response) {
+                console.error('[APIManager.postTradeConfig] Error response:', error.response.data);
+            } else {
+                console.error('[APIManager.postTradeConfig] Error:', error.message || error);
+            }
+            throw error;
         }
     }
 

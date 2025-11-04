@@ -21,6 +21,17 @@ class TradeDelegate {
             this._futureSymbol = niftyFutureData.data.tradingsymbol;
             console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.tradingsymbol);
 
+
+            // const logData = await this.apiManager.fetchTradeConfig();
+            // if (!(logData && logData.data)) {
+            //     console.warn('[TradeDelegate] Unable to fetch trade configuration; using default settings.');
+            //     return false;
+            // }
+
+            // console.log('[TradeDelegate] Trade configuration fetched:', logData.data);
+
+            // this.apiManager.postTradeConfig({});
+
             const expiryOk = await this.calculateNearestExpiryDate();
             if (expiryOk === false) return false;
 
