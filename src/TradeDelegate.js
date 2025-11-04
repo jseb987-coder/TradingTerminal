@@ -13,6 +13,14 @@ class TradeDelegate {
       async setupCalls() {
         try {
 
+            const niftyFutureData = await this.apiManager.fetchNearestNiftyFutureName();
+            if (!(niftyFutureData && niftyFutureData.data)) {
+                console.warn('[TradeDelegate] Unable to fetch nearest NIFTY future contract; using default symbol.');
+                return false;
+            }
+            this._futureSymbol = niftyFutureData.data.tradingsymbol;
+            console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.tradingsymbol);
+
             const expiryOk = await this.calculateNearestExpiryDate();
             if (expiryOk === false) return false;
 

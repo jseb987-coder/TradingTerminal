@@ -80,7 +80,7 @@ class MarketDataFeed {
           guid: "someguid",
           method: "sub",
           data: {
-            mode: "ltpc",
+            mode: "full",
             instrumentKeys: this.instrumentKeys,
           },
         };

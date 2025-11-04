@@ -138,15 +138,36 @@ class AutoTrader extends React.Component {
   }
 
   handleMarketData(data) {
+    //console.log('Market data received:', data);
+
+    // Helper: extract and log the OHLC entry with interval 'I1'
+    const logI1FromParsed = (parsed) => {
+      try {
+        const ohlcArray = parsed?.feeds?.[SYMBOL_NAME]?.fullFeed?.indexFF?.marketOHLC?.ohlc;
+        if (Array.isArray(ohlcArray)) {
+          const i1 = ohlcArray.find(entry => entry && entry.interval === 'I1');
+          if (i1) {
+            console.log('Market data I1 OHLC:', i1);
+            //{interval: 'I1', open: 25611.75, high: 25618.6, low: 25610.2, close: 25611.8, …}
+          }
+        }
+      } catch (err) {
+        // Keep this silent to avoid interfering with existing error handling
+      }
+    };
+
     try {
       const parsed = JSON.parse(data);
       const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
       if (ltp !== undefined) {
-        console.log('LTP:', ltp);
-        _tradeDelegate.setLtp(ltp);
+       // console.log('LTP:', ltp);{"interval":"I1","open":25616.55,"high":25618.05,"low":25613.05,"close":25615.2,"ts":"1762246920000"}]
+        //_tradeDelegate.setLtp(ltp);
       } else {
-        console.log('LTP not available in data');
+        //console.log('LTP not available in data');{"interval":"I1","open":25616.15,"high":25618.55,"low":25614.75,"close":25617.05
       }
+
+      // call helper to log the I1 OHLC if present
+      logI1FromParsed(parsed);
     } catch (error) {
       console.error('Error parsing market data:', error);
     }
