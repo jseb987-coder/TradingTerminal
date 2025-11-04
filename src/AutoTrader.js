@@ -32,6 +32,10 @@ class AutoTrader extends React.Component {
   this.handleOrderData = this.handleOrderData.bind(this);
   this.toggleSettings = this.toggleSettings.bind(this);
 
+    // prepare offline alarm audio (assume only WAV file is present)
+    // initialization moved to a dedicated method for clarity
+    this.initOfflineAudio();
+
     // Initialize button instances
     this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
     this.sellButton = new SellButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
@@ -85,14 +89,31 @@ class AutoTrader extends React.Component {
   componentWillUnmount() {
     window.removeEventListener('online', this.handleOnline);
     window.removeEventListener('offline', this.handleOffline);
+    // cleanup offline audio if exists
+    try {
+      // Use helper to pause/reset audio and clear reference
+      this.pauseOfflineAudio();
+      this._offlineAudio = null;
+    } catch (e) {}
   }
 
   handleOnline() {
     this.setState({ isConnected: true });
+    // Stop alarm when back online
+    this.pauseOfflineAudio();
+    // Re-enable buttons when connection is restored
+    try {
+      this.setBusy(false);
+    } catch (e) {}
   }
 
   handleOffline() {
     this.setState({ isConnected: false });
+    // Disable buttons while offline and play alarm on loop until reconnected
+    try {
+      this.setBusy(true);
+    } catch (e) {}
+    this.playOfflineAudio();
   }
 
   setPositionStatus(value) {
@@ -101,6 +122,40 @@ class AutoTrader extends React.Component {
 
   setBusy(isBusy) {
     this.setState({ isBusy });
+  }
+
+  // Initialize offline alarm audio (WAV-only)
+  initOfflineAudio() {
+    try {
+      const audio = new Audio('/mixkit-facility-alarm-sound-999.wav');
+      audio.loop = true;
+      audio.volume = 0.6;
+      this._offlineAudio = audio;
+    } catch (e) {
+      this._offlineAudio = null;
+    }
+  }
+
+  // Play the offline alarm (handles autoplay promise rejection silently)
+  playOfflineAudio() {
+    try {
+      if (this._offlineAudio && this._offlineAudio.paused) {
+        const p = this._offlineAudio.play();
+        if (p && p.catch) p.catch(() => {
+          // autoplay may be blocked by browser; ignore silently
+        });
+      }
+    } catch (e) {}
+  }
+
+  // Pause and reset the offline alarm
+  pauseOfflineAudio() {
+    try {
+      if (this._offlineAudio && !this._offlineAudio.paused) {
+        this._offlineAudio.pause();
+        this._offlineAudio.currentTime = 0;
+      }
+    } catch (e) {}
   }
 
   toggleSettings() {

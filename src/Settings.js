@@ -25,6 +25,23 @@ export default function Settings({ onClose }) {
   const [values, setValues] = useState(initialMap);
 
   const handleChange = (key, val) => {
+    // Prevent negative values for numeric option inputs (buy_/sell_ keys)
+    if (typeof val === 'string' && (key.startsWith('buy_') || key.startsWith('sell_'))) {
+      // allow empty string to clear the field
+      if (val === '') {
+        setValues(prev => ({ ...prev, [key]: '' }));
+        return;
+      }
+      const num = Number(val);
+      if (Number.isNaN(num)) {
+        // ignore invalid numeric input
+        return;
+      }
+      const safe = Math.max(0, num);
+      setValues(prev => ({ ...prev, [key]: String(safe) }));
+      return;
+    }
+
     setValues(prev => ({ ...prev, [key]: val }));
   };
 
@@ -74,6 +91,7 @@ export default function Settings({ onClose }) {
                     <div style={styles.rowLabel}>{label}</div>
                     <input
                       type="number"
+                      min={0}
                       value={values[key]}
                       onChange={(e) => handleChange(key, e.target.value)}
                       style={styles.valueInput}
@@ -93,6 +111,7 @@ export default function Settings({ onClose }) {
                     <div style={styles.rowLabel}>{label}</div>
                     <input
                       type="number"
+                      min={0}
                       value={values[key]}
                       onChange={(e) => handleChange(key, e.target.value)}
                       style={styles.valueInput}
@@ -250,7 +269,7 @@ const styles = {
     border: '1px solid #333',
     background: '#111',
     color: '#fff',
-    textAlign: 'right'
+    textAlign: 'center'
   },
   actions: {
     display: 'flex',
