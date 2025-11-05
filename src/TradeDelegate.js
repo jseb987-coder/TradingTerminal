@@ -201,6 +201,14 @@ class TradeDelegate {
     async getAccountBalance(segment = null) {
         try {
             this._balance = await this.apiManager.getAccountBalance(segment);
+            if (this._balance && this._balance.errors && Array.isArray(this._balance.errors) && this._balance.errors.length > 0) {
+                const error = this._balance.errors[0];
+                if (error.errorCode === 'UDAPI100072') {
+                    console.log('[TradeDelegate] Funds service unavailable:', error.message);
+                    this._balance = { serviceUnavailable: true, message: error.message };
+                    return true;
+                }
+            }
             if (this._balance && this._balance.locked) {
                 console.log('[TradeDelegate] Account balance: Account is locked.');
                 return true;

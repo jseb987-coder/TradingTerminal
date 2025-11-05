@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 export default function Settings({ onClose, onSave, balance, positionConfig }) {
   // Use balance from props, default to 0 if not provided
-  const displayBalance = balance?.locked ? 'Account Locked' : (balance?.data?.equity?.available_margin ?? 0);
+  const displayBalance = balance?.serviceUnavailable ? balance.message : (balance?.locked ? 'Account Locked' : (balance?.data?.equity?.available_margin ?? 0));
 
   // Initialize values from positionConfig if available
   const initialMap = {};

@@ -88,6 +88,7 @@ class APIManager {
         const factor = options.factor ?? 2;
         const maxDelay = options.maxDelay ?? 30000; // 30 seconds
         const cancelToken = options.cancelToken;
+        const returnValueOnError = options.returnValueOnError;
 
         let attempt = 0;
         while (attempt < maxRetries) {
@@ -102,12 +103,21 @@ class APIManager {
             } catch (error) {
                 if (axios.isCancel(error)) {
                     console.log('[APIManager.getUrl] Request cancelled:', error.message);
+                    if (returnValueOnError !== undefined) {
+                        return returnValueOnError;
+                    }
                     throw error; // Re-throw cancellation
                 }
                 const isNetworkError = !error.response;
                 if (!isNetworkError) {
                     // Not a network error, so fail fast
+                    if (error.response.status === 423) {
+                        return { locked: true };
+                    }
                     console.error(error?.response?.status ? `Error: ${error.response.status} - ${error.response.data}` : error.message);
+                    if (returnValueOnError !== undefined) {
+                        return returnValueOnError;
+                    }
                     throw error;
                 }
 
@@ -116,6 +126,12 @@ class APIManager {
                 console.warn(`[APIManager] Network error on GET ${url}. Retrying attempt ${attempt} in ${delay}ms...`);
                 await this._sleep(delay);
             }
+        }
+        if (returnValueOnError !== undefined) {
+            return returnValueOnError;
+        }
+        if (returnValueOnError !== undefined) {
+            return returnValueOnError;
         }
         throw new Error(`[APIManager] GET ${url} failed after ${maxRetries} attempts.`);
     }
@@ -181,15 +197,7 @@ class APIManager {
         if (segment) {
             url += `?segment=${segment}`;
         }
-        try {
-            return this.getUrl(url);
-        } catch (error) {
-            if (error.response && error.response.status === 423) {
-                console.warn('[APIManager.getAccountBalance] Account is locked (423).');
-                return { locked: true };
-            }
-            throw error;
-        }
+        return this.getUrl(url, null, { returnValueOnError: true });
     }
 
      async closeAllPositions() {
