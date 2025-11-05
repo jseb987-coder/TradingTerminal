@@ -31,7 +31,6 @@ class TradeDelegate {
                 return false;
             }
 
-            console.log('[TradeDelegate] Trade configuration fetched:', this._positionConfig.data);
 
             // this.apiManager.postTradeConfig({});
 
@@ -103,6 +102,19 @@ class TradeDelegate {
 
     get positionConfig() {
         return this._positionConfig;
+    }
+
+    setPositionConfig(config) {
+        this._positionConfig = { data: config };
+    }
+
+    async postTradeConfig() {
+        try {
+            await this.apiManager.postTradeConfig(this._positionConfig.data);
+            console.log('[TradeDelegate] Trade configuration posted to server successfully.');
+        } catch (error) {
+            console.error('[TradeDelegate] Error posting trade configuration:', error.message);
+        }
     }
 
     setLtp(ltp) {

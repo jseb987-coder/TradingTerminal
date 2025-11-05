@@ -162,6 +162,16 @@ class AutoTrader extends React.Component {
     this.setState((s) => ({ showSettings: !s.showSettings }));
   }
 
+  handleSaveSettings = async (configData) => {
+    try {
+      _tradeDelegate.setPositionConfig(configData);
+      await _tradeDelegate.postTradeConfig();
+      console.log('Settings saved and posted to server.');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
+  };
+
   renderButton(button) {
     const isDisabled = button.isDisabled(this.state.positionStatus) || this.state.isBusy;
     const cursor = button.getCursor(this.state.positionStatus, this.state.isBusy);
@@ -425,7 +435,7 @@ class AutoTrader extends React.Component {
             </div>
           </div>
         </>)}
-  {this.state.showSettings && <Settings onClose={this.toggleSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} />}
+  {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} />}
         <span
           style={{
             color: statusColor,
