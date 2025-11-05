@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export default function Settings({ onClose, onSave, balance, positionConfig }) {
   // Use balance from props, default to 0 if not provided
-  const displayBalance = balance?.data?.equity?.available_margin ?? 0;
+  const displayBalance = balance?.locked ? 'Account Locked' : (balance?.data?.equity?.available_margin ?? 0);
 
   // Initialize values from positionConfig if available
   const initialMap = {};
@@ -13,9 +13,22 @@ export default function Settings({ onClose, onSave, balance, positionConfig }) {
   const sellLabels = Object.keys(sellConfig);
   const buyLabels = Object.keys(buyConfig);
 
-  // Sell displays in original order, Buy in reversed order
-  const sellDisplay = sellLabels;
-  const buyDisplay = buyLabels.slice().reverse();
+  // Function to get sort value for labels
+  const getSortValue = (label) => {
+    if (label === 'ATM') return 0;
+    const match = label.match(/(ITM|OTM)\+(\d+)/);
+    if (match) {
+      const type = match[1];
+      const num = parseInt(match[2]);
+      return type === 'ITM' ? num : -num;
+    }
+    return 0;
+  };
+
+  // Sell displays in ascending order: OTM+5 to ITM+5
+  const sellDisplay = sellLabels.sort((a, b) => getSortValue(a) - getSortValue(b));
+  // Buy displays in descending order: ITM+5 to OTM+5
+  const buyDisplay = buyLabels.sort((a, b) => getSortValue(b) - getSortValue(a));
 
   // Use distinct keys for buy vs sell
   const buyKeys = buyDisplay.map(l => `buy_${l}`);
@@ -35,6 +48,36 @@ export default function Settings({ onClose, onSave, balance, positionConfig }) {
   });
 
   const [values, setValues] = useState(initialMap);
+
+  // Update values when positionConfig changes
+  useEffect(() => {
+    const newInitialMap = {};
+    const buyConfig = positionConfig?.data?.BUY || {};
+    const sellConfig = positionConfig?.data?.sell || {};
+
+    const sellLabels = Object.keys(sellConfig);
+    const buyLabels = Object.keys(buyConfig);
+
+    const sellDisplay = sellLabels;
+    const buyDisplay = buyLabels.slice().reverse();
+
+    const buyKeys = buyDisplay.map(l => `buy_${l}`);
+    const sellKeys = sellDisplay.map(l => `sell_${l}`);
+
+    buyDisplay.forEach((label, i) => {
+      const key = buyKeys[i];
+      const configValue = buyConfig[label] !== undefined ? String(buyConfig[label]) : '';
+      newInitialMap[key] = configValue;
+    });
+
+    sellDisplay.forEach((label, i) => {
+      const key = sellKeys[i];
+      const configValue = sellConfig[label] !== undefined ? String(sellConfig[label]) : '';
+      newInitialMap[key] = configValue;
+    });
+
+    setValues(newInitialMap);
+  }, [positionConfig]);
 
   const handleChange = (key, val) => {
     // Prevent negative values for numeric option inputs (buy_/sell_ keys)
@@ -114,7 +157,9 @@ export default function Settings({ onClose, onSave, balance, positionConfig }) {
         <div style={styles.content}>
           <div style={styles.balanceRow}>
             <strong>Available Balance:</strong>
-            <span style={{ marginLeft: 8 }}>&#8377; {displayBalance.toFixed(2)}</span>
+            <span style={{ marginLeft: 8 }}>
+              {typeof displayBalance === 'string' ? displayBalance : `₹ ${displayBalance.toFixed(2)}`}
+            </span>
           </div>
 
           <div style={styles.columns}>

@@ -181,7 +181,15 @@ class APIManager {
         if (segment) {
             url += `?segment=${segment}`;
         }
-        return this.getUrl(url);
+        try {
+            return this.getUrl(url);
+        } catch (error) {
+            if (error.response && error.response.status === 423) {
+                console.warn('[APIManager.getAccountBalance] Account is locked (423).');
+                return { locked: true };
+            }
+            throw error;
+        }
     }
 
      async closeAllPositions() {

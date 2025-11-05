@@ -117,6 +117,23 @@ class TradeDelegate {
         }
     }
 
+    async fetchPositionConfig() {
+        try {
+            const fetched = await this.apiManager.fetchTradeConfig();
+            if (fetched && fetched.data) {
+                this._positionConfig = fetched;
+                console.log('[TradeDelegate] Trade configuration refetched:', this._positionConfig.data);
+                return true;
+            } else {
+                console.warn('[TradeDelegate] Unable to fetch trade configuration.');
+                return false;
+            }
+        } catch (error) {
+            console.error('[TradeDelegate] Error refetching trade configuration:', error.message);
+            return false;
+        }
+    }
+
     setLtp(ltp) {
         this._ltp = ltp;
     }
@@ -184,6 +201,10 @@ class TradeDelegate {
     async getAccountBalance(segment = null) {
         try {
             this._balance = await this.apiManager.getAccountBalance(segment);
+            if (this._balance && this._balance.locked) {
+                console.log('[TradeDelegate] Account balance: Account is locked.');
+                return true;
+            }
             console.log('[TradeDelegate] Account balance fetched:', this._balance);
             return true;
         } catch (error) {

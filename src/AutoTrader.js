@@ -158,9 +158,13 @@ class AutoTrader extends React.Component {
     } catch (e) {}
   }
 
-  toggleSettings() {
+  toggleSettings = async () => {
+    if (!this.state.showSettings) {
+      // Opening settings, refetch the latest config from server
+      await _tradeDelegate.fetchPositionConfig();
+    }
     this.setState((s) => ({ showSettings: !s.showSettings }));
-  }
+  };
 
   handleSaveSettings = async (configData) => {
     try {
