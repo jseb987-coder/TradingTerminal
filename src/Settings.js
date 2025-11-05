@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 
-export default function Settings({ onClose }) {
-  // Hardcoded balance for now
-  const [balance] = useState(12345.67);
+export default function Settings({ onClose, balance }) {
+  // Use balance from props, default to 0 if not provided
+  const displayBalance = balance?.data?.equity?.available_margin ?? 0;
 
   const baseLabels = [
     'ATM+5', 'ATM+4', 'ATM+3', 'ATM+2', 'ATM+1', 'ITM',
@@ -46,7 +46,7 @@ export default function Settings({ onClose }) {
   };
 
   const handleSave = () => {
-    console.log('Settings saved:', { balance, values });
+    console.log('Settings saved:', { balance: displayBalance, values });
     // For now close the modal after save
     if (onClose) onClose();
   };
@@ -58,7 +58,7 @@ export default function Settings({ onClose }) {
       // input type=date gives YYYY-MM-DD, convert to YYYY/MM/DD
       return d.replace(/-/g, '/');
     };
-    console.log('Backtest started with values:', { balance, values, from: fmt(fromDate), to: fmt(toDate) });
+    console.log('Backtest started with values:', { balance: displayBalance, values, from: fmt(fromDate), to: fmt(toDate) });
     // Implement backtest integration later
   };
 
@@ -78,7 +78,7 @@ export default function Settings({ onClose }) {
         <div style={styles.content}>
           <div style={styles.balanceRow}>
             <strong>Available Balance:</strong>
-            <span style={{ marginLeft: 8 }}>&#8377; {balance.toFixed(2)}</span>
+            <span style={{ marginLeft: 8 }}>&#8377; {displayBalance.toFixed(2)}</span>
           </div>
 
           <div style={styles.columns}>

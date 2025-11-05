@@ -423,7 +423,7 @@ class AutoTrader extends React.Component {
             </div>
           </div>
         </>)}
-  {this.state.showSettings && <Settings onClose={this.toggleSettings} />}
+  {this.state.showSettings && <Settings onClose={this.toggleSettings} balance={_tradeDelegate.balance} />}
         <span
           style={{
             color: statusColor,

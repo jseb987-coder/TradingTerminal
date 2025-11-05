@@ -43,6 +43,9 @@ class TradeDelegate {
             const posOk = await this.calculatePositionDetails();
             if (posOk === false) return false;
 
+            const balanceOk = await this.getAccountBalance();
+            if (balanceOk === false) return false;
+
 
             return true;
         } catch (error) {
@@ -93,6 +96,10 @@ class TradeDelegate {
 
     get currentPosition() {
         return this._currentPosition;
+    }
+
+    get balance() {
+        return this._balance;
     }
 
     setLtp(ltp) {
