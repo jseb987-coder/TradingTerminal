@@ -24,15 +24,14 @@ class TradeDelegate {
             const holidayCheck = await this.apiManager.isMarketHoliday('2025-12-25');
             console.log('[TradeDelegate] Market holidays fetched:', holidayCheck);
 
-            //The below commented code is for fetching trade configuration from server, currently not in use.
 
-            // const logData = await this.apiManager.fetchTradeConfig();
-            // if (!(logData && logData.data)) {
-            //     console.warn('[TradeDelegate] Unable to fetch trade configuration; using default settings.');
-            //     return false;
-            // }
+            this._positionConfig = await this.apiManager.fetchTradeConfig();
+            if (!(this._positionConfig && this._positionConfig.data)) {
+                console.warn('[TradeDelegate] Unable to fetch trade configuration; using default settings.');
+                return false;
+            }
 
-            // console.log('[TradeDelegate] Trade configuration fetched:', logData.data);
+            console.log('[TradeDelegate] Trade configuration fetched:', this._positionConfig.data);
 
             // this.apiManager.postTradeConfig({});
 
@@ -100,6 +99,10 @@ class TradeDelegate {
 
     get balance() {
         return this._balance;
+    }
+
+    get positionConfig() {
+        return this._positionConfig;
     }
 
     setLtp(ltp) {

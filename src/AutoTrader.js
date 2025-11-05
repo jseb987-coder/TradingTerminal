@@ -349,6 +349,7 @@ class AutoTrader extends React.Component {
                 onClick={this.toggleSettings}
                 title="Settings"
                 aria-label="Open settings"
+                disabled={!this.state.backendConnected}
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.12)',
@@ -361,7 +362,8 @@ class AutoTrader extends React.Component {
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: 8,
-                  cursor: 'pointer'
+                  cursor: this.state.backendConnected ? 'pointer' : 'not-allowed',
+                  opacity: this.state.backendConnected ? 1 : 0.5
                 }}
               >
                 ⚙
@@ -423,7 +425,7 @@ class AutoTrader extends React.Component {
             </div>
           </div>
         </>)}
-  {this.state.showSettings && <Settings onClose={this.toggleSettings} balance={_tradeDelegate.balance} />}
+  {this.state.showSettings && <Settings onClose={this.toggleSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} />}
         <span
           style={{
             color: statusColor,

@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 
-export default function Settings({ onClose, balance }) {
+export default function Settings({ onClose, balance, positionConfig }) {
   // Use balance from props, default to 0 if not provided
   const displayBalance = balance?.data?.equity?.available_margin ?? 0;
 
   const baseLabels = [
-    'ATM+5', 'ATM+4', 'ATM+3', 'ATM+2', 'ATM+1', 'ITM',
-    'OTM+1', 'OTM+2', 'OTM+3', 'OTM+4', 'OTM+5'
+    'OTM+5', 'OTM+4', 'OTM+3', 'OTM+2', 'OTM+1', 'ATM',
+    'ITM+1', 'ITM+2', 'ITM+3', 'ITM+4', 'ITM+5'
   ];
 
   // We want buy and sell to show reversed orders from each other.
@@ -18,9 +18,40 @@ export default function Settings({ onClose, balance }) {
   const buyKeys = buyDisplay.map(l => `buy_${l}`);
   const sellKeys = sellDisplay.map(l => `sell_${l}`);
 
+  // Helper to map config keys (ATM, OTM1, OTM2, ...) to display labels (OTM+5, OTM+4, ...)
+  const configKeyMap = {
+    'ATM': 'ATM',
+    'ITM': 'OTM+5',
+    'ITM+1': 'OTM+4',
+    'ITM+2': 'OTM+3',
+    'ITM+3': 'OTM+2',
+    'ITM+4': 'OTM+1',
+    'OTM1': 'ITM+1',
+    'OTM2': 'ITM+2',
+    'OTM3': 'ITM+3',
+    'OTM4': 'ITM+4',
+    'OTM5': 'ITM+5'
+  };
+
+  // Initialize values from positionConfig if available
   const initialMap = {};
-  buyDisplay.forEach((l, i) => { initialMap[buyKeys[i]] = ''; });
-  sellDisplay.forEach((l, i) => { initialMap[sellKeys[i]] = ''; });
+  const buyConfig = positionConfig?.data?.BUY || {};
+  const sellConfig = positionConfig?.data?.sell || {};
+
+  buyDisplay.forEach((label, i) => {
+    const key = buyKeys[i];
+    // Find the config key that matches this label
+    const configKey = Object.keys(configKeyMap).find(k => configKeyMap[k] === label);
+    const configValue = configKey && buyConfig[configKey] !== undefined ? String(buyConfig[configKey]) : '';
+    initialMap[key] = configValue;
+  });
+
+  sellDisplay.forEach((label, i) => {
+    const key = sellKeys[i];
+    const configKey = Object.keys(configKeyMap).find(k => configKeyMap[k] === label);
+    const configValue = configKey && sellConfig[configKey] !== undefined ? String(sellConfig[configKey]) : '';
+    initialMap[key] = configValue;
+  });
 
   const [values, setValues] = useState(initialMap);
 
@@ -46,7 +77,66 @@ export default function Settings({ onClose, balance }) {
   };
 
   const handleSave = () => {
-    console.log('Settings saved:', { balance: displayBalance, values });
+    // Map display labels back to config keys
+    const reverseConfigKeyMap = {
+      'ATM': 'ATM',
+      'OTM+5': 'ITM',
+      'OTM+4': 'ITM+1',
+      'OTM+3': 'ITM+2',
+      'OTM+2': 'ITM+3',
+      'OTM+1': 'ITM+4',
+      'ITM+1': 'OTM1',
+      'ITM+2': 'OTM2',
+      'ITM+3': 'OTM3',
+      'ITM+4': 'OTM4',
+      'ITM+5': 'OTM5'
+    };
+
+    // Build BUY config object
+    const buyConfigObj = {};
+    buyDisplay.forEach((label, i) => {
+      const key = buyKeys[i];
+      const configKey = reverseConfigKeyMap[label];
+      const value = values[key] ? Number(values[key]) : 0;
+      if (configKey) {
+        buyConfigObj[configKey] = value;
+      }
+    });
+
+    // Build sell config object
+    const sellConfigObj = {};
+    sellDisplay.forEach((label, i) => {
+      const key = sellKeys[i];
+      const configKey = reverseConfigKeyMap[label];
+      const value = values[key] ? Number(values[key]) : 0;
+      if (configKey) {
+        sellConfigObj[configKey] = value;
+      }
+    });
+
+    // Format output with proper key names (ITM1 instead of ITM+1, etc.)
+    const formatConfigKey = (key) => {
+      if (key === 'ATM' || key === 'ITM') return key;
+      // Replace + with nothing for ITM+1 -> ITM1
+      return key.replace('+', '');
+    };
+
+    const finalBuyConfig = {};
+    Object.keys(buyConfigObj).forEach(k => {
+      finalBuyConfig[formatConfigKey(k)] = buyConfigObj[k];
+    });
+
+    const finalSellConfig = {};
+    Object.keys(sellConfigObj).forEach(k => {
+      finalSellConfig[formatConfigKey(k)] = sellConfigObj[k];
+    });
+
+    const configData = {
+      sell: finalSellConfig,
+      BUY: finalBuyConfig
+    };
+
+    console.log('Settings saved:', JSON.stringify(configData, null, 2));
     // For now close the modal after save
     if (onClose) onClose();
   };
