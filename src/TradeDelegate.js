@@ -21,6 +21,9 @@ class TradeDelegate {
             this._futureSymbol = niftyFutureData.data.tradingsymbol;
             console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.tradingsymbol);
 
+            const holidayCheck = await this.apiManager.isMarketHoliday('2025-12-25');
+            console.log('[TradeDelegate] Market holidays fetched:', holidayCheck);
+
             //The below commented code is for fetching trade configuration from server, currently not in use.
 
             // const logData = await this.apiManager.fetchTradeConfig();
@@ -28,7 +31,7 @@ class TradeDelegate {
             //     console.warn('[TradeDelegate] Unable to fetch trade configuration; using default settings.');
             //     return false;
             // }
-            
+
             // console.log('[TradeDelegate] Trade configuration fetched:', logData.data);
 
             // this.apiManager.postTradeConfig({});
@@ -39,9 +42,6 @@ class TradeDelegate {
             // Calculate and store position details
             const posOk = await this.calculatePositionDetails();
             if (posOk === false) return false;
-
-            const balanceOk = await this.getAccountBalance();
-            if (balanceOk === false) return false;
 
 
             return true;

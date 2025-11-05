@@ -131,6 +131,38 @@ class APIManager {
         return this.getUrl(url);
     }
 
+    async getHistoricData(interval, fromDate, toDate) {
+        const instrumentKeyEsc = encodeURIComponent(this._symbol);
+        const intervalEsc = encodeURIComponent(interval);
+        const toDateEsc = encodeURIComponent(toDate);
+        const fromDateEsc = encodeURIComponent(fromDate);
+        const url = `https://api.upstox.com/v2/historical-candle/${instrumentKeyEsc}/${intervalEsc}/${toDateEsc}/${fromDateEsc}`;
+        return this.getUrl(url);
+    }
+
+    async getExpiredHistoricalCandles(instrumentKey, interval, toDate, fromDate) {
+        const instrumentKeyEsc = encodeURIComponent(instrumentKey);
+        const intervalEsc = encodeURIComponent(interval);
+        const toDateEsc = encodeURIComponent(toDate);
+        const fromDateEsc = encodeURIComponent(fromDate);
+        const url = `https://api.upstox.com/v2/expired-instruments/historical-candle/${instrumentKeyEsc}/${intervalEsc}/${toDateEsc}/${fromDateEsc}`;
+        return this.getUrl(url);
+    }
+
+    async getExpiredFutureContract(instrumentKey, expiryDate) {
+        const instrumentKeyEsc = encodeURIComponent(instrumentKey);
+        const expiryDateEsc = encodeURIComponent(expiryDate);
+        const url = `https://api.upstox.com/v2/expired-instruments/future/contract?instrument_key=${instrumentKeyEsc}&expiry_date=${expiryDateEsc}`;
+        return this.getUrl(url);
+    }
+
+    async getExpiredOptionContract(instrumentKey, expiryDate) {
+        const instrumentKeyEsc = encodeURIComponent(instrumentKey);
+        const expiryDateEsc = encodeURIComponent(expiryDate);
+        const url = `https://api.upstox.com/v2/expired-instruments/option/contract?instrument_key=${instrumentKeyEsc}&expiry_date=${expiryDateEsc}`;
+        return this.getUrl(url);
+    }
+
     async getPositions() {
     const url = 'https://api.upstox.com/v2/portfolio/short-term-positions';
     return this.getUrl(url);
@@ -258,6 +290,37 @@ class APIManager {
                 console.error('[APIManager.postTradeConfig] Error:', error.message || error);
             }
             throw error;
+        }
+    }
+
+    async isMarketHoliday(date = null) {
+        try {
+            let url = 'https://api.upstox.com/v2/market/holidays';
+            if (date) {
+                url += `?date=${encodeURIComponent(date)}`;
+            }
+            const response = await this.getUrl(url);
+            
+            if (!response || !response.data) {
+                console.warn('[APIManager.isMarketHoliday] No data returned from holidays endpoint.');
+                return null;
+            }
+
+            // If date was provided, check if the response contains that date as a holiday
+            if (date) {
+                // Response should contain array of holidays; check if our date is in it
+                const holidays = Array.isArray(response.data) ? response.data : [];
+                const isHoliday = holidays.some(h => h.date === date || h.trading_date === date);
+                console.log(`[APIManager.isMarketHoliday] Date ${date} is ${isHoliday ? 'a holiday' : 'not a holiday'}.`);
+                return isHoliday;
+            } else {
+                // If no date provided, just return the full list (caller can inspect)
+                //console.log('[APIManager.isMarketHoliday] All holidays:', response.data);
+                return response.data;
+            }
+        } catch (error) {
+            console.error('[APIManager.isMarketHoliday] Error:', error.message || error);
+            return null;
         }
     }
 
