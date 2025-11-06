@@ -25,12 +25,14 @@ class AutoTrader extends React.Component {
     this.handleOffline = this.handleOffline.bind(this);
     this.setPositionStatus = this.setPositionStatus.bind(this);
     this.setBusy = this.setBusy.bind(this);
-  this.marketDataFeed = null;
-  this.orderDataFeed = null;
+    this.marketDataFeed = null;
+    this.orderDataFeed = null;
     this._tester = 0;
-  this.handleMarketData = this.handleMarketData.bind(this);
-  this.handleOrderData = this.handleOrderData.bind(this);
-  this.toggleSettings = this.toggleSettings.bind(this);
+    this.handleMarketData = this.handleMarketData.bind(this);
+    this.handleOrderData = this.handleOrderData.bind(this);
+    this.toggleSettings = this.toggleSettings.bind(this);
+    this.newCandleUpdated = this.newCandleUpdated.bind(this);
+    this.previousCandle = null;
 
     // prepare offline alarm audio (assume only WAV file is present)
     // initialization moved to a dedicated method for clarity
@@ -43,15 +45,19 @@ class AutoTrader extends React.Component {
     this.reverseButton = new ReverseButton(_tradeDelegate, this.setPositionStatus.bind(this), () => this.state.positionStatus, this.setBusy.bind(this));
   }
 
-  async setUpMarketFeed(token, symbol) {
-    this.marketDataFeed = new MarketDataFeed(token, this.handleMarketData, [symbol], () => this.setState({ dataStreamConnected: true }), () => this.setState({ dataStreamConnected: false }));
+  async setUpMarketFeed(token, symbol, mode, type) {
+    this.marketDataFeed = new MarketDataFeed(token, (data, t) => this.handleMarketData(data, t), [symbol], () => this.setState({ dataStreamConnected: true }), () => this.setState({ dataStreamConnected: false }), mode, type);
+  }
+
+  async setUpFutureFeed(token) {
+    this.futureDataFeed = new MarketDataFeed(token, (data, t) => this.handleMarketData(data, t), [_tradeDelegate._futureSymbol], () => console.log('Future data feed connected'), () => console.log('Future data feed disconnected'), "full", "future");
   }
 
   async setUpOrderFeed(token) {
     this.orderDataFeed = new OrderDataFeed(token, this.handleOrderData, () => this.setState({ orderStreamConnected: true }), () => this.setState({ orderStreamConnected: false }));
   }
 
-  
+
 
 
   async setUpAutoTrader() {
@@ -81,7 +87,8 @@ class AutoTrader extends React.Component {
     _tradeDelegate.initialize(this.token, SYMBOL_NAME);
     const backendOk = await this.setUpAutoTrader();
     if (backendOk) {
-      await this.setUpMarketFeed(this.token, SYMBOL_NAME);
+      await this.setUpMarketFeed(this.token, SYMBOL_NAME, "ltpc", "current");
+      await this.setUpFutureFeed(this.token);
       await this.setUpOrderFeed(this.token);
     }
   }
@@ -94,7 +101,7 @@ class AutoTrader extends React.Component {
       // Use helper to pause/reset audio and clear reference
       this.pauseOfflineAudio();
       this._offlineAudio = null;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   handleOnline() {
@@ -104,7 +111,7 @@ class AutoTrader extends React.Component {
     // Re-enable buttons when connection is restored
     try {
       this.setBusy(false);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   handleOffline() {
@@ -112,7 +119,7 @@ class AutoTrader extends React.Component {
     // Disable buttons while offline and play alarm on loop until reconnected
     try {
       this.setBusy(true);
-    } catch (e) {}
+    } catch (e) { }
     this.playOfflineAudio();
   }
 
@@ -145,7 +152,7 @@ class AutoTrader extends React.Component {
           // autoplay may be blocked by browser; ignore silently
         });
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Pause and reset the offline alarm
@@ -155,7 +162,11 @@ class AutoTrader extends React.Component {
         this._offlineAudio.pause();
         this._offlineAudio.currentTime = 0;
       }
-    } catch (e) {}
+    } catch (e) { }
+  }
+
+  newCandleUpdated(candle) {
+    console.log('New candle updated:', candle);
   }
 
   toggleSettings = async () => {
@@ -182,16 +193,16 @@ class AutoTrader extends React.Component {
     const baseStyle = button.getStyle();
     const style = isDisabled
       ? {
-          ...baseStyle,
-          cursor,
-          opacity: 0.5,
-          filter: 'grayscale(50%)',
-          transform: 'none',
-        }
+        ...baseStyle,
+        cursor,
+        opacity: 0.5,
+        filter: 'grayscale(50%)',
+        transform: 'none',
+      }
       : {
-          ...baseStyle,
-          cursor,
-        };
+        ...baseStyle,
+        cursor,
+      };
 
     return (
       <button
@@ -206,41 +217,38 @@ class AutoTrader extends React.Component {
     );
   }
 
-  handleMarketData(data) {
-    //console.log('Market data received:', data);
 
-    // Helper: extract and log the OHLC entry with interval 'I1'
-    const logI1FromParsed = (parsed) => {
+  handleMarketData = (data, type) => {
+    if (type === "current") {
       try {
+        const parsed = JSON.parse(data);
+        const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
+        if (ltp !== undefined && ltp !== null) {
+          _tradeDelegate.setLtp(ltp);
+          console.log('LTP updated to:', ltp);
+        }
+      } catch (error) {
+        console.error('Error parsing current market data:', error);
+      }
+    } else if (type === "future") {
+      try {
+        const parsed = JSON.parse(data);
         const ohlcArray = parsed?.feeds?.[SYMBOL_NAME]?.fullFeed?.indexFF?.marketOHLC?.ohlc;
-        if (Array.isArray(ohlcArray)) {
-          const i1 = ohlcArray.find(entry => entry && entry.interval === 'I1');
-          if (i1) {
-            console.log('Market data I1 OHLC:', i1);
-            //{interval: 'I1', open: 25611.75, high: 25618.6, low: 25610.2, close: 25611.8, …}
+        if (ohlcArray) {
+          const i1Candle = ohlcArray.find(candle => candle.interval === 'I1');
+          if (i1Candle) {
+            const candleStr = JSON.stringify(i1Candle);
+            if (this.previousCandle !== candleStr) {
+              this.previousCandle = candleStr;
+              this.newCandleUpdated(i1Candle);
+            }
           }
         }
-      } catch (err) {
-        // Keep this silent to avoid interfering with existing error handling
+      } catch (error) {
+        console.error('Error parsing future market data:', error);
       }
-    };
-
-    try {
-      const parsed = JSON.parse(data);
-      const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
-      if (ltp !== undefined) {
-       // console.log('LTP:', ltp);{"interval":"I1","open":25616.55,"high":25618.05,"low":25613.05,"close":25615.2,"ts":"1762246920000"}]
-        //_tradeDelegate.setLtp(ltp);
-      } else {
-        //console.log('LTP not available in data');{"interval":"I1","open":25616.15,"high":25618.55,"low":25614.75,"close":25617.05
-      }
-
-      // call helper to log the I1 OHLC if present
-      logI1FromParsed(parsed);
-    } catch (error) {
-      console.error('Error parsing market data:', error);
     }
-  }
+  };
 
   async handleOrderData(data) {
     // The feed may sometimes send multiple JSON objects concatenated. Extract balanced JSON objects.
@@ -356,48 +364,48 @@ class AutoTrader extends React.Component {
             }
           `}
         </style>
-  {/* settings button will be rendered above the status indicators (right side) */}
-  {this.state.isConnected && (<>
-            <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 6 }}>
-              <button
-                onClick={this.toggleSettings}
-                title="Settings"
-                aria-label="Open settings"
-                disabled={!this.state.backendConnected}
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#fff',
-                  padding: '10px',
-                  fontSize: '1.25rem',
-                  minWidth: 44,
-                  height: 44,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 8,
-                  cursor: this.state.backendConnected ? 'pointer' : 'not-allowed',
-                  opacity: this.state.backendConnected ? 1 : 0.5
-                }}
-              >
-                ⚙
-              </button>
-            </div>
-
-            <div
+        {/* settings button will be rendered above the status indicators (right side) */}
+        {this.state.isConnected && (<>
+          <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 6 }}>
+            <button
+              onClick={this.toggleSettings}
+              title="Settings"
+              aria-label="Open settings"
+              disabled={!this.state.backendConnected}
               style={{
-                position: 'absolute',
-                top: 'calc(10px + 5vw + 12px)', // place below the responsive status text (10px top + 5vw font size + gap)
-                left: 16,
-                zIndex: 2,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.12)',
                 color: '#fff',
-                fontFamily: 'monospace',
-                fontSize: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start'
+                padding: '10px',
+                fontSize: '1.25rem',
+                minWidth: 44,
+                height: 44,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 8,
+                cursor: this.state.backendConnected ? 'pointer' : 'not-allowed',
+                opacity: this.state.backendConnected ? 1 : 0.5
               }}
             >
+              ⚙
+            </button>
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(10px + 5vw + 12px)', // place below the responsive status text (10px top + 5vw font size + gap)
+              left: 16,
+              zIndex: 2,
+              color: '#fff',
+              fontFamily: 'monospace',
+              fontSize: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start'
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
               <span
                 style={{
@@ -439,7 +447,7 @@ class AutoTrader extends React.Component {
             </div>
           </div>
         </>)}
-  {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} />}
+        {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} />}
         <span
           style={{
             color: statusColor,

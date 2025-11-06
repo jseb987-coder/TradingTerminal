@@ -53,12 +53,14 @@ const decodeProfobuf = (buffer) => {
 
 // MarketDataFeed class
 class MarketDataFeed {
-  constructor(token, onMessageCallback, instrumentKeys, onConnect, onDisconnect) {
+  constructor(token, onMessageCallback, instrumentKeys, onConnect, onDisconnect, mode = "full", type = "current") {
     this.token = token;
     this.onMessageCallback = onMessageCallback;
     this.instrumentKeys = instrumentKeys;
     this.onConnect = onConnect;
     this.onDisconnect = onDisconnect;
+    this.mode = mode;
+    this.type = type;
     this.ws = null;
     this.init();
   }
@@ -80,7 +82,7 @@ class MarketDataFeed {
           guid: "someguid",
           method: "sub",
           data: {
-            mode: "full",
+            mode: this.mode,
             instrumentKeys: this.instrumentKeys,
           },
         };
@@ -98,7 +100,7 @@ class MarketDataFeed {
         let buffer = Buffer.from(arrayBuffer);
         let response = decodeProfobuf(buffer);
         if (this.onMessageCallback) {
-          this.onMessageCallback(JSON.stringify(response));
+          this.onMessageCallback(JSON.stringify(response), this.type);
         }
       };
 
