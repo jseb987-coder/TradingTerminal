@@ -72,11 +72,14 @@ class MarketDataFeed {
 
   async connect() {
     try {
+      console.log(`[${this.type}] Getting WebSocket URL...`);
       const wsUrl = await getUrl(this.token);
+      console.log(`[${this.type}] WebSocket URL obtained:`, wsUrl);
+      console.log(`[${this.type}] Instrument keys:`, this.instrumentKeys);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log("Connected");
+        console.log(`[${this.type}] Connected`);
         if (this.onConnect) this.onConnect();
         const data = {
           guid: "someguid",
@@ -86,12 +89,12 @@ class MarketDataFeed {
             instrumentKeys: this.instrumentKeys,
           },
         };
-        console.log('Sending subscription:', data);
+        console.log(`[${this.type}] Sending subscription:`, data);
         this.ws.send(Buffer.from(JSON.stringify(data)));
       };
 
       this.ws.onclose = () => {
-        console.log("WebSocket closed");
+        console.log(`[${this.type}] WebSocket closed`);
         if (this.onDisconnect) this.onDisconnect();
       };
 
@@ -105,11 +108,11 @@ class MarketDataFeed {
       };
 
       this.ws.onerror = (error) => {
-        console.log("WebSocket error:", error);
+        console.log(`[${this.type}] WebSocket error:`, error);
         if (this.onDisconnect) this.onDisconnect();
       };
     } catch (error) {
-      console.error("WebSocket connection error:", error);
+      console.error(`[${this.type}] WebSocket connection error:`, error);
     }
   }
 

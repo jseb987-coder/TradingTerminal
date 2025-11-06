@@ -15,6 +15,7 @@ class AutoTrader extends React.Component {
       isConnected: navigator.onLine,
       backendConnected: false,
       dataStreamConnected: false,
+      futureDataStreamConnected: false,
       orderStreamConnected: false,
       showSettings: false,
       positionStatus: 0,
@@ -50,7 +51,7 @@ class AutoTrader extends React.Component {
   }
 
   async setUpFutureFeed(token) {
-    this.futureDataFeed = new MarketDataFeed(token, (data, t) => this.handleMarketData(data, t), [_tradeDelegate._futureSymbol], () => console.log('Future data feed connected'), () => console.log('Future data feed disconnected'), "full", "future");
+    this.futureDataFeed = new MarketDataFeed(token, (data, t) => this.handleMarketData(data, t), [_tradeDelegate._futureSymbol], () => this.setState({ futureDataStreamConnected: true }), () => this.setState({ futureDataStreamConnected: false }), "full", "future");
   }
 
   async setUpOrderFeed(token) {
@@ -430,6 +431,19 @@ class AutoTrader extends React.Component {
                 }}
               ></span>
               Data Stream
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: this.state.futureDataStreamConnected ? 'limegreen' : 'red',
+                  marginRight: '0.5rem',
+                }}
+              ></span>
+              Future Data Stream
             </div>
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
               <span
