@@ -18,8 +18,8 @@ class TradeDelegate {
                 console.warn('[TradeDelegate] Unable to fetch nearest NIFTY future contract; using default symbol.');
                 return false;
             }
-            this._futureSymbol = niftyFutureData.data.tradingsymbol;
-            console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.tradingsymbol);
+            this._futureSymbol = niftyFutureData.data.instrument_key;
+            console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.instrument_key);
 
             const holidayCheck = await this.apiManager.isMarketHoliday('2025-12-25');
             console.log('[TradeDelegate] Market holidays fetched:', holidayCheck);
