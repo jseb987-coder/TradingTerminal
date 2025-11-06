@@ -225,7 +225,6 @@ class AutoTrader extends React.Component {
         const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
         if (ltp !== undefined && ltp !== null) {
           _tradeDelegate.setLtp(ltp);
-          //console.log('LTP updated to:', ltp);
         }
       } catch (error) {
         console.error('Error parsing current market data:', error);
