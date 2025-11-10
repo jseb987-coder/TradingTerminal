@@ -347,7 +347,6 @@ class APIManager {
                 // Response should contain array of holidays; check if our date is in it
                 const holidays = Array.isArray(response.data) ? response.data : [];
                 const isHoliday = holidays.some(h => h.date === date || h.trading_date === date);
-                console.log(`[APIManager.isMarketHoliday] Date ${date} is ${isHoliday ? 'a holiday' : 'not a holiday'}.`);
                 return isHoliday;
             } else {
                 // If no date provided, just return the full list (caller can inspect)

@@ -21,9 +21,6 @@ class TradeDelegate {
             this._futureSymbol = niftyFutureData.data.instrument_key;
             console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.instrument_key);
 
-            // const holidayCheck = await this.apiManager.isMarketHoliday('2025-12-25');
-            // console.log('[TradeDelegate] Market holidays fetched:', holidayCheck);
-
 
             this._positionConfig = await this.apiManager.fetchTradeConfig();
             if (!(this._positionConfig && this._positionConfig.data)) {
@@ -44,6 +41,12 @@ class TradeDelegate {
                 return false;
             }
            // console.log('[TradeDelegate] Historic data fetched successfully:', this._historicData);
+
+           this._bufferData = await this.getBufferData(startDate);
+           if (!this._bufferData) {
+                console.warn('[TradeDelegate] Failed to fetch buffer data');
+                return false;
+            }
 
             const expiryOk = await this.calculateNearestExpiryDate();
             if (expiryOk === false) return false;
@@ -337,6 +340,37 @@ class TradeDelegate {
 
     setHistoricData(data) {
         this._historicData = data;
+    }
+
+    async getBufferData(startDate) {
+        try {
+            // Calculate the previous trading day from startDate
+            const previousTradingDay = await this.calculateHistoricDataStartDate(1, startDate);
+            if (!previousTradingDay) {
+                console.warn('[TradeDelegate] Unable to calculate previous trading day for buffer data.');
+                return null;
+            }
+
+            // Fetch historic data for that specific day
+            const bufferData = await this.apiManager.getHistoricDataV3(
+                this._futureSymbol,
+                'minutes',
+                '1',
+                previousTradingDay,
+                previousTradingDay
+            );
+
+            if (!bufferData || !bufferData.data || !bufferData.data.candles) {
+                console.warn('[TradeDelegate] Failed to fetch buffer data for date:', previousTradingDay);
+                return null;
+            }
+
+            console.log(`[TradeDelegate] Buffer data fetched for ${previousTradingDay}:`, bufferData.data.candles.length, 'candles');
+            return bufferData.data.candles;
+        } catch (error) {
+            console.error('[TradeDelegate] Error fetching buffer data:', error.message);
+            return null;
+        }
     }
 
 }

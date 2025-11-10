@@ -72,7 +72,7 @@ class AutoTrader extends React.Component {
       if (backendOk) {
         this.setState({ backendConnected: true });
         // Initialize LiveTrader when backend is connected
-        await this.liveTrader.initialize(_tradeDelegate.historicData);
+        await this.liveTrader.initialize(_tradeDelegate.historicData,_tradeDelegate._bufferData);
         if (_tradeDelegate.currentPosition === 'CALL') {
           this.setPositionStatus(1);
         } else if (_tradeDelegate.currentPosition === 'PUT') {
