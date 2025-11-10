@@ -53,14 +53,13 @@ const decodeProfobuf = (buffer) => {
 
 // MarketDataFeed class
 class MarketDataFeed {
-  constructor(token, onMessageCallback, instrumentKeys, onConnect, onDisconnect, mode = "full", type = "current") {
+  constructor(token, onMessageCallback, instrumentKeys, onConnect, onDisconnect, mode = "full") {
     this.token = token;
     this.onMessageCallback = onMessageCallback;
     this.instrumentKeys = instrumentKeys;
     this.onConnect = onConnect;
     this.onDisconnect = onDisconnect;
     this.mode = mode;
-    this.type = type;
     this.ws = null;
     this.init();
   }
@@ -72,14 +71,14 @@ class MarketDataFeed {
 
   async connect() {
     try {
-      console.log(`[${this.type}] Getting WebSocket URL...`);
+      console.log(`Getting WebSocket URL...`);
       const wsUrl = await getUrl(this.token);
-      console.log(`[${this.type}] WebSocket URL obtained:`, wsUrl);
-      console.log(`[${this.type}] Instrument keys:`, this.instrumentKeys);
+      console.log(`WebSocket URL obtained:`, wsUrl);
+      console.log(`Instrument keys:`, this.instrumentKeys);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log(`[${this.type}] Connected`);
+        console.log(`Connected`);
         if (this.onConnect) this.onConnect();
         const data = {
           guid: "someguid",
@@ -89,12 +88,12 @@ class MarketDataFeed {
             instrumentKeys: this.instrumentKeys,
           },
         };
-        console.log(`[${this.type}] Sending subscription:`, data);
+        console.log(`Sending subscription:`, data);
         this.ws.send(Buffer.from(JSON.stringify(data)));
       };
 
       this.ws.onclose = () => {
-        console.log(`[${this.type}] WebSocket closed`);
+        console.log(`WebSocket closed`);
         if (this.onDisconnect) this.onDisconnect();
       };
 
@@ -103,16 +102,16 @@ class MarketDataFeed {
         let buffer = Buffer.from(arrayBuffer);
         let response = decodeProfobuf(buffer);
         if (this.onMessageCallback) {
-          this.onMessageCallback(JSON.stringify(response), this.type);
+          this.onMessageCallback(JSON.stringify(response));
         }
       };
 
       this.ws.onerror = (error) => {
-        console.log(`[${this.type}] WebSocket error:`, error);
+        console.log(`WebSocket error:`, error);
         if (this.onDisconnect) this.onDisconnect();
       };
     } catch (error) {
-      console.error(`[${this.type}] WebSocket connection error:`, error);
+      console.error(`WebSocket connection error:`, error);
     }
   }
 

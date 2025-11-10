@@ -15,7 +15,6 @@ class AutoTrader extends React.Component {
       isConnected: navigator.onLine,
       backendConnected: false,
       dataStreamConnected: false,
-      futureDataStreamConnected: false,
       orderStreamConnected: false,
       showSettings: false,
       positionStatus: 0,
@@ -46,12 +45,13 @@ class AutoTrader extends React.Component {
     this.reverseButton = new ReverseButton(_tradeDelegate, this.setPositionStatus.bind(this), () => this.state.positionStatus, this.setBusy.bind(this));
   }
 
-  async setUpMarketFeed(token, symbol, mode, type) {
-    this.marketDataFeed = new MarketDataFeed(token, (data, t) => this.handleMarketData(data, t), [symbol], () => this.setState({ dataStreamConnected: true }), () => this.setState({ dataStreamConnected: false }), mode, type);
-  }
-
-  async setUpFutureFeed(token) {
-    this.futureDataFeed = new MarketDataFeed(token, (data, t) => this.handleMarketData(data, t), [_tradeDelegate._futureSymbol], () => this.setState({ futureDataStreamConnected: true }), () => this.setState({ futureDataStreamConnected: false }), "full", "future");
+  async setUpMarketFeed(token) {
+    // Combine both current and future symbols into one feed
+    const symbols = [SYMBOL_NAME];
+    if (_tradeDelegate._futureSymbol) {
+      symbols.push(_tradeDelegate._futureSymbol);
+    }
+    this.marketDataFeed = new MarketDataFeed(token, (data) => this.handleMarketData(data), symbols, () => this.setState({ dataStreamConnected: true }), () => this.setState({ dataStreamConnected: false }), "full");
   }
 
   async setUpOrderFeed(token) {
@@ -88,8 +88,7 @@ class AutoTrader extends React.Component {
     _tradeDelegate.initialize(this.token, SYMBOL_NAME);
     const backendOk = await this.setUpAutoTrader();
     if (backendOk) {
-      await this.setUpMarketFeed(this.token, SYMBOL_NAME, "ltpc", "current");
-      await this.setUpFutureFeed(this.token);
+      await this.setUpMarketFeed(this.token);
       await this.setUpOrderFeed(this.token);
     }
   }
@@ -168,6 +167,7 @@ class AutoTrader extends React.Component {
 
   newCandleUpdated(candle) {
     console.log('New candle updated:', candle);
+    //{interval: 'I1', open: 25632, high: 25638, low: 25630.5, close: 25637.2,ts: 1762423140000,vol: 52425}
   }
 
   toggleSettings = async () => {
@@ -219,21 +219,23 @@ class AutoTrader extends React.Component {
   }
 
 
-  handleMarketData = (data, type) => {
-    if (type === "current") {
-      try {
-        const parsed = JSON.parse(data);
-        const ltp = parsed?.feeds?.[SYMBOL_NAME]?.ltpc?.ltp;
+  handleMarketData = (data) => {
+    try {
+      const parsed = JSON.parse(data);
+      
+      // Check if data contains current symbol (NSE_INDEX|Nifty 50)
+      if (parsed?.feeds?.[SYMBOL_NAME]) {
+        // Extract LTP from ltpc field
+        const ltp = parsed.feeds[SYMBOL_NAME]?.fullFeed?.indexFF?.ltpc?.ltp;
         if (ltp !== undefined && ltp !== null) {
           _tradeDelegate.setLtp(ltp);
         }
-      } catch (error) {
-        console.error('Error parsing current market data:', error);
       }
-    } else if (type === "future") {
-      try {
-        const parsed = JSON.parse(data);
-        const ohlcArray = parsed?.feeds?.[SYMBOL_NAME]?.fullFeed?.indexFF?.marketOHLC?.ohlc;
+      
+      // Check if data contains future symbol
+      const futureSymbol = _tradeDelegate._futureSymbol;
+      if (futureSymbol && parsed?.feeds?.[futureSymbol]) {
+        const ohlcArray = parsed.feeds[futureSymbol]?.fullFeed?.marketFF?.marketOHLC?.ohlc;
         if (ohlcArray) {
           const i1Candle = ohlcArray.find(candle => candle.interval === 'I1');
           if (i1Candle) {
@@ -244,9 +246,9 @@ class AutoTrader extends React.Component {
             }
           }
         }
-      } catch (error) {
-        console.error('Error parsing future market data:', error);
       }
+    } catch (error) {
+      console.error('Error parsing market data:', error);
     }
   };
 
@@ -431,19 +433,6 @@ class AutoTrader extends React.Component {
                 }}
               ></span>
               Data Stream
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  backgroundColor: this.state.futureDataStreamConnected ? 'limegreen' : 'red',
-                  marginRight: '0.5rem',
-                }}
-              ></span>
-              Future Data Stream
             </div>
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
               <span
