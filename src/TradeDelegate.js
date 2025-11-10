@@ -21,8 +21,8 @@ class TradeDelegate {
             this._futureSymbol = niftyFutureData.data.instrument_key;
             console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.instrument_key);
 
-            const holidayCheck = await this.apiManager.isMarketHoliday('2025-12-25');
-            console.log('[TradeDelegate] Market holidays fetched:', holidayCheck);
+            // const holidayCheck = await this.apiManager.isMarketHoliday('2025-12-25');
+            // console.log('[TradeDelegate] Market holidays fetched:', holidayCheck);
 
 
             this._positionConfig = await this.apiManager.fetchTradeConfig();
@@ -31,8 +31,19 @@ class TradeDelegate {
                 return false;
             }
 
+            let startDate = await this.calculateHistoricDataStartDate(5);
+            if (!startDate) {
+                console.warn('[TradeDelegate] Unable to calculate historic data start date.');
+                return false;
+            }
 
-            // this.apiManager.postTradeConfig({});
+            // Fetch historic data from startDate to current date
+            this._historicData = await this.getHistoricData(this._futureSymbol, 'minutes', '1', startDate);
+            if (!this._historicData) {
+                console.warn('[TradeDelegate] Failed to fetch historic data');
+                return false;
+            }
+           // console.log('[TradeDelegate] Historic data fetched successfully:', this._historicData);
 
             const expiryOk = await this.calculateNearestExpiryDate();
             if (expiryOk === false) return false;
@@ -55,6 +66,46 @@ class TradeDelegate {
 
         }
         
+    }
+
+    async calculateHistoricDataStartDate(callback = 5, startDate = null) {
+
+        const baseDate = startDate ? new Date(startDate) : new Date();
+        let checkDate = new Date(baseDate);
+        let validTradingDays = 0;
+
+        // Keep going back until we have enough valid trading days
+        while (validTradingDays < callback) {
+            checkDate.setDate(checkDate.getDate() - 1);
+
+            // Skip weekends (Saturday = 6, Sunday = 0)
+            const dayOfWeek = checkDate.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                continue; // Skip weekends
+            }
+
+            // Check if it's a holiday
+            const dateString = checkDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            try {
+                const isHoliday = await this.apiManager.isMarketHoliday(dateString);
+                if (isHoliday) {
+                    continue; // Skip holidays
+                }
+            } catch (error) {
+                console.warn(`[TradeDelegate] Could not check holiday status for ${dateString}:`, error.message);
+                return false; // Exit on error
+            }
+
+            // If we reach here, it's a valid trading day
+            validTradingDays++;
+        }
+
+        // Format the final date as YYYY-MM-DD
+        const calculatedStartDate = checkDate.toISOString().split('T')[0];
+        const referenceDate = startDate ? startDate : 'today';
+        console.log(`[TradeDelegate] Calculated historic data start date: ${calculatedStartDate} (${callback} trading days back from ${referenceDate})`);
+
+        return calculatedStartDate;
     }
 
 
@@ -244,6 +295,48 @@ class TradeDelegate {
             // If none <=, return the lowest strike
             return options[0];
         }
+    }
+
+    async getHistoricData(instrumentKey, intervalType, intervalValue, startDate) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const currentDate = yesterday.toISOString().split('T')[0];
+        const historicData = await this.apiManager.getHistoricDataV3(instrumentKey, intervalType, intervalValue, currentDate, startDate);
+        if (!historicData) {
+                console.warn('[TradeDelegate] Failed to fetch historic data');
+                return false;
+        }
+        const intradayData = await this.apiManager.getIntradayCandles(instrumentKey, intervalType, intervalValue);
+        if (!intradayData) {
+            console.warn('[TradeDelegate] Failed to fetch intraday data');
+            return false;
+        }
+        console.log('[TradeDelegate] Merging historic and intraday data');
+        // Merge intraday data first, then historic data, avoiding duplicates
+        const mergedDataMap = new Map();
+        if (intradayData.data && intradayData.data.candles) {
+            intradayData.data.candles.forEach(candle => {
+                const key = candle.timestamp || candle[0];
+                mergedDataMap.set(key, candle);
+            });
+        }
+        if (historicData.data && historicData.data.candles) {
+            historicData.data.candles.forEach(candle => {
+                const key = candle.timestamp || candle[0];
+                if (!mergedDataMap.has(key)) {
+                    mergedDataMap.set(key, candle);
+                }
+            });
+        }
+        return Array.from(mergedDataMap.values());
+    }
+
+    get historicData() {
+        return this._historicData;
+    }
+
+    setHistoricData(data) {
+        this._historicData = data;
     }
 
 }

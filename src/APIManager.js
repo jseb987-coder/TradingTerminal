@@ -147,13 +147,33 @@ class APIManager {
         return this.getUrl(url);
     }
 
-    async getHistoricData(interval, fromDate, toDate) {
-        const instrumentKeyEsc = encodeURIComponent(this._symbol);
-        const intervalEsc = encodeURIComponent(interval);
+    async getHistoricDataV3(instrumentKey, intervalType, intervalValue, toDate, fromDate) {
+        const instrumentKeyEsc = encodeURIComponent(instrumentKey);
         const toDateEsc = encodeURIComponent(toDate);
         const fromDateEsc = encodeURIComponent(fromDate);
-        const url = `https://api.upstox.com/v2/historical-candle/${instrumentKeyEsc}/${intervalEsc}/${toDateEsc}/${fromDateEsc}`;
-        return this.getUrl(url);
+
+        const url = `https://api.upstox.com/v3/historical-candle/${instrumentKeyEsc}/${intervalType}/${intervalValue}/${toDateEsc}/${fromDateEsc}`;
+        try {
+            const response = await this.getUrl(url);
+            console.log('[APIManager] Historic data (v3) fetched successfully');
+            return response;
+        } catch (error) {
+            console.error(`[APIManager] Error fetching historic data (v3): ${error.message}`);
+            return null;
+        }
+    }
+
+    async getIntradayCandles(instrumentKey, intervalType, intervalValue) {
+        const instrumentKeyEsc = encodeURIComponent(instrumentKey);
+        const url = `https://api.upstox.com/v3/historical-candle/intraday/${instrumentKeyEsc}/${intervalType}/${intervalValue}`;
+        try {
+            const response = await this.getUrl(url);
+            console.log('[APIManager] Intraday candles fetched successfully');
+            return response;
+        } catch (error) {
+            console.error(`[APIManager] Error fetching intraday candles: ${error.message}`);
+            return null;
+        }
     }
 
     async getExpiredHistoricalCandles(instrumentKey, interval, toDate, fromDate) {

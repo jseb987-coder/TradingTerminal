@@ -6,14 +6,17 @@ import "./App.css";
 
 function App() {
 
-  const [authCode, setAuthCode] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // const [authCode, setAuthCode] = useState("");
+  // const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+   const [authCode, setAuthCode] = useState("eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzQUE1SlAiLCJqdGkiOiI2OTExZTBlMmVhOTljNDY0YzUzNjRhMjMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYyNzc5MzYyLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjI4MTIwMDB9.9ZikMBfsZjJspqEHMQzqEd62KaZkLgVMi9L3ZuYUwVY");
+   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (authCode.trim() !== "") {
       setIsAuthenticated(true);
-      console.log("Ann mary is an oola")
+      console.log("Authenticated successfully");
     }
   };
 

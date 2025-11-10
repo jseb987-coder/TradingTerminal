@@ -4,6 +4,7 @@ import MarketDataFeed from "./socket/MarketDataFeed";
 import OrderDataFeed from "./socket/OrderDataFeed";
 import Settings from './Settings';
 import { BuyButton, SellButton, CloseButton, ReverseButton } from "./Buttons";
+import LiveTrader from './TradeLogic/LiveTrader';
 
 const _tradeDelegate = new TradeDelegate();
 const SYMBOL_NAME = "NSE_INDEX|Nifty 50";
@@ -33,6 +34,9 @@ class AutoTrader extends React.Component {
     this.toggleSettings = this.toggleSettings.bind(this);
     this.newCandleUpdated = this.newCandleUpdated.bind(this);
     this.previousCandle = null;
+
+    // Create LiveTrader instance
+    this.liveTrader = new LiveTrader(_tradeDelegate);
 
     // prepare offline alarm audio (assume only WAV file is present)
     // initialization moved to a dedicated method for clarity
@@ -67,6 +71,8 @@ class AutoTrader extends React.Component {
       const backendOk = await _tradeDelegate.setupCalls();
       if (backendOk) {
         this.setState({ backendConnected: true });
+        // Initialize LiveTrader when backend is connected
+        await this.liveTrader.initialize(_tradeDelegate.historicData);
         if (_tradeDelegate.currentPosition === 'CALL') {
           this.setPositionStatus(1);
         } else if (_tradeDelegate.currentPosition === 'PUT') {
