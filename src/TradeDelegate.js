@@ -28,7 +28,7 @@ class TradeDelegate {
                 return false;
             }
 
-            let startDate = await this.calculateHistoricDataStartDate(5);
+            let startDate = await this.calculateHistoricDataStartDate(7);
             if (!startDate) {
                 console.warn('[TradeDelegate] Unable to calculate historic data start date.');
                 return false;
@@ -71,14 +71,14 @@ class TradeDelegate {
         
     }
 
-    async calculateHistoricDataStartDate(callback = 5, startDate = null) {
+    async calculateHistoricDataStartDate(lookback = 5, startDate = null) {
 
         const baseDate = startDate ? new Date(startDate) : new Date();
         let checkDate = new Date(baseDate);
         let validTradingDays = 0;
 
         // Keep going back until we have enough valid trading days
-        while (validTradingDays < callback) {
+        while (validTradingDays < lookback) {
             checkDate.setDate(checkDate.getDate() - 1);
 
             // Skip weekends (Saturday = 6, Sunday = 0)
@@ -106,7 +106,7 @@ class TradeDelegate {
         // Format the final date as YYYY-MM-DD
         const calculatedStartDate = checkDate.toISOString().split('T')[0];
         const referenceDate = startDate ? startDate : 'today';
-        console.log(`[TradeDelegate] Calculated historic data start date: ${calculatedStartDate} (${callback} trading days back from ${referenceDate})`);
+        console.log(`[TradeDelegate] Calculated historic data start date: ${calculatedStartDate} (${lookback} trading days back from ${referenceDate})`);
 
         return calculatedStartDate;
     }
@@ -345,7 +345,7 @@ class TradeDelegate {
     async getBufferData(startDate) {
         try {
             // Calculate the previous trading day from startDate
-            const previousTradingDay = await this.calculateHistoricDataStartDate(1, startDate);
+            const previousTradingDay = await this.calculateHistoricDataStartDate(5, startDate);
             if (!previousTradingDay) {
                 console.warn('[TradeDelegate] Unable to calculate previous trading day for buffer data.');
                 return null;
