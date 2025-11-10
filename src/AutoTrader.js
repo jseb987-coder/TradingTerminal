@@ -67,7 +67,6 @@ class AutoTrader extends React.Component {
 
   async setUpAutoTrader() {
 
-    try {
       const backendOk = await _tradeDelegate.setupCalls();
       if (backendOk) {
         this.setState({ backendConnected: true });
@@ -82,10 +81,6 @@ class AutoTrader extends React.Component {
         this.setState({ backendConnected: false });
       }
       return backendOk;
-    } catch {
-      this.setState({ backendConnected: false });
-      return false;
-    }
   }
 
   async componentDidMount() {

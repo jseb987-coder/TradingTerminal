@@ -6,13 +6,16 @@ class Trendline {
         this.y2 = y2;
     }
 
-    calculate(y) {
-        // Linear interpolation: y - y1 = m(x - x1)
-        // x = x1 + (y - y1) / m
-        // where m = (y2 - y1) / (x2 - x1)
+    calculateX(y) {
         const m = (this.y2 - this.y1) / (this.x2 - this.x1);
         const x = this.x1 + (y - this.y1) / m;
         return x;
+    }
+
+    calculateY(x) {
+        const m = (this.y2 - this.y1) / (this.x2 - this.x1);
+        const y = this.y1 + m * (x - this.x1);
+        return y;
     }
 }
 
