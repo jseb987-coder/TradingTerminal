@@ -19,7 +19,8 @@ class AutoTrader extends React.Component {
       orderStreamConnected: false,
       showSettings: false,
       positionStatus: 0,
-      isBusy: false
+      isBusy: false,
+      autoTradingEnabled: true // Default to ON
     };
     this.token = props.token;
     this.handleOnline = this.handleOnline.bind(this);
@@ -177,6 +178,27 @@ class AutoTrader extends React.Component {
       await _tradeDelegate.fetchPositionConfig();
     }
     this.setState((s) => ({ showSettings: !s.showSettings }));
+  };
+
+  toggleAutoTrading = () => {
+    this.setState((s) => ({ autoTradingEnabled: !s.autoTradingEnabled }));
+  };
+
+  // Execute button functions
+  executeBuy = () => {
+    this.buyButton.execute();
+  };
+
+  executeSell = () => {
+    this.sellButton.execute();
+  };
+
+  executeCloseAll = () => {
+    this.closeButton.execute();
+  };
+
+  executeReverse = () => {
+    this.reverseButton.execute();
   };
 
   handleSaveSettings = async (configData) => {
@@ -365,6 +387,16 @@ class AutoTrader extends React.Component {
             .button:active {
               transform: scale(0.95);
             }
+            @keyframes pulse {
+              0% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.7; transform: scale(1.05); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+            @keyframes disclaimerGlow {
+              0% { text-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, 0 0 15px #ffff00; }
+              50% { text-shadow: 0 0 10px #ffff00, 0 0 20px #ffff00, 0 0 30px #ffff00; }
+              100% { text-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, 0 0 15px #ffff00; }
+            }
           `}
         </style>
         {/* settings button will be rendered above the status indicators (right side) */}
@@ -450,7 +482,7 @@ class AutoTrader extends React.Component {
             </div>
           </div>
         </>)}
-        {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} />}
+        {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} autoTradingEnabled={this.state.autoTradingEnabled} onToggleAutoTrading={this.toggleAutoTrading} />}
         <span
           style={{
             color: statusColor,
@@ -485,23 +517,65 @@ class AutoTrader extends React.Component {
           </div>
         )}
         {this.state.backendConnected && (
-          <div
-            style={{
-              marginTop: "2rem",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gridTemplateRows: "auto auto",
-              gap: "1rem",
-              justifyItems: "center",
-              zIndex: 1,
-            }}
-          >
-            {this.renderButton(this.buyButton)}
-            {this.renderButton(this.sellButton)}
-            {this.renderButton(this.closeButton)}
-            {this.renderButton(this.reverseButton)}
-          </div>
+          this.state.autoTradingEnabled ? (
+            <div
+              style={{
+                marginTop: "2rem",
+                fontSize: "3vw",
+                color: "limegreen",
+                fontFamily: "monospace",
+                fontWeight: "bold",
+                zIndex: 1,
+                textTransform: "uppercase",
+                letterSpacing: "0.2em",
+                animation: "pulse 1.5s ease-in-out infinite",
+              }}
+            >
+              Auto Trading
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: "2rem",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gridTemplateRows: "auto auto",
+                gap: "1rem",
+                justifyItems: "center",
+                zIndex: 1,
+              }}
+            >
+              {this.renderButton(this.buyButton)}
+              {this.renderButton(this.sellButton)}
+              {this.renderButton(this.closeButton)}
+              {this.renderButton(this.reverseButton)}
+            </div>
+          )
         )}
+        
+        {/* Disclaimer text at bottom */}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 30,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: '#ffff00',
+            fontFamily: 'monospace',
+            fontSize: '1.2rem',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            padding: '10px 20px',
+            borderRadius: '6px',
+            border: '2px solid rgba(255,255,255,0.3)',
+            zIndex: 10,
+            animation: 'disclaimerGlow 2s ease-in-out infinite alternate',
+          }}
+        >
+          Make sure audio is not muted
+        </div>
       </div>
     );
   }

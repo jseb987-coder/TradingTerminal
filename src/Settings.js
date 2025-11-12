@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-export default function Settings({ onClose, onSave, balance, positionConfig }) {
+export default function Settings({ onClose, onSave, balance, positionConfig, autoTradingEnabled, onToggleAutoTrading }) {
   // Use balance from props, default to 0 if not provided
   const displayBalance = balance?.serviceUnavailable ? balance.message : (balance?.locked ? 'Account Locked' : (balance?.data?.equity?.available_margin ?? 0));
 
@@ -154,6 +154,33 @@ export default function Settings({ onClose, onSave, balance, positionConfig }) {
           <button onClick={onClose} style={styles.closeButton} aria-label="Close settings">✕</button>
         </div>
 
+        <div style={styles.toggleRow}>
+          <label style={styles.toggleLabel}>
+            <input
+              type="checkbox"
+              checked={autoTradingEnabled}
+              onChange={onToggleAutoTrading}
+              style={styles.toggleInput}
+            />
+            <span style={{
+              ...styles.toggleSwitch,
+              backgroundColor: autoTradingEnabled ? 'limegreen' : '#333'
+            }}>
+              <span style={{
+                position: 'absolute',
+                top: '2px',
+                left: autoTradingEnabled ? '22px' : '2px',
+                width: '20px',
+                height: '20px',
+                backgroundColor: '#fff',
+                borderRadius: '50%',
+                transition: 'left 0.3s'
+              }}></span>
+            </span>
+            Auto Trading
+          </label>
+        </div>
+
         <div style={styles.content}>
           <div style={styles.balanceRow}>
             <strong>Available Balance:</strong>
@@ -296,6 +323,30 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     marginBottom: '0.75rem'
+  },
+  toggleRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '1rem'
+  },
+  toggleLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    color: '#fff'
+  },
+  toggleInput: {
+    display: 'none'
+  },
+  toggleSwitch: {
+    position: 'relative',
+    width: '44px',
+    height: '24px',
+    backgroundColor: '#333',
+    borderRadius: '12px',
+    transition: 'background-color 0.3s'
   },
   closeButton: {
     background: 'transparent',
