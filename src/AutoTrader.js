@@ -482,7 +482,7 @@ class AutoTrader extends React.Component {
             </div>
           </div>
         </>)}
-        {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} autoTradingEnabled={this.state.autoTradingEnabled} onToggleAutoTrading={this.toggleAutoTrading} />}
+        {this.state.showSettings && <Settings onClose={this.toggleSettings} onSave={this.handleSaveSettings} balance={_tradeDelegate.balance} positionConfig={_tradeDelegate.positionConfig} autoTradingEnabled={this.state.autoTradingEnabled} onToggleAutoTrading={this.toggleAutoTrading} lotSize={_tradeDelegate.lotSize} freezeLimit={_tradeDelegate.freezeLimit} />}
         <span
           style={{
             color: statusColor,

@@ -158,6 +158,14 @@ class TradeDelegate {
         return this._positionConfig;
     }
 
+    get lotSize() {
+        return this._lotSize;
+    }
+
+    get freezeLimit() {
+        return this._freezeLimit;
+    }
+
     setPositionConfig(config) {
         this._positionConfig = { data: config };
     }
@@ -227,6 +235,9 @@ class TradeDelegate {
             // Precompute sorted ATM options for efficiency
             this.atmCalls = nearestOptions.filter(o => o.instrument_type === 'CE').sort((a, b) => a.strike_price - b.strike_price);
             this.atmPuts = nearestOptions.filter(o => o.instrument_type === 'PE').sort((a, b) => a.strike_price - b.strike_price);
+
+            this._lotSize = this.atmCalls.length > 0 ? this.atmCalls[0].lot_size : (this.atmPuts.length > 0 ? this.atmPuts[0].lot_size : null);
+            this._freezeLimit = this.atmCalls.length > 0 ? this.atmCalls[0].freeze_quantity : (this.atmPuts.length > 0 ? this.atmPuts[0].freeze_quantity : null);
 
             if(this._expiryDate) {
                 console.log(`[TradeDelegate] Nearest expiry option data loaded for date: ${this._expiryDate}`);

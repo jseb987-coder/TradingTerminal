@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-export default function Settings({ onClose, onSave, balance, positionConfig, autoTradingEnabled, onToggleAutoTrading }) {
+export default function Settings({ onClose, onSave, balance, positionConfig, autoTradingEnabled, onToggleAutoTrading, lotSize, freezeLimit }) {
   // Use balance from props, default to 0 if not provided
   const displayBalance = balance?.serviceUnavailable ? balance.message : (balance?.locked ? 'Account Locked' : (balance?.data?.equity?.available_margin ?? 0));
 
@@ -48,6 +48,7 @@ export default function Settings({ onClose, onSave, balance, positionConfig, aut
   });
 
   const [values, setValues] = useState(initialMap);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Update values when positionConfig changes
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function Settings({ onClose, onSave, balance, positionConfig, aut
       // allow empty string to clear the field
       if (val === '') {
         setValues(prev => ({ ...prev, [key]: '' }));
+        setErrorMessage('');
         return;
       }
       const num = Number(val);
@@ -94,10 +96,12 @@ export default function Settings({ onClose, onSave, balance, positionConfig, aut
       }
       const safe = Math.max(0, num);
       setValues(prev => ({ ...prev, [key]: String(safe) }));
+      setErrorMessage('');
       return;
     }
 
     setValues(prev => ({ ...prev, [key]: val }));
+    setErrorMessage('');
   };
 
   const handleSave = () => {
@@ -116,6 +120,28 @@ export default function Settings({ onClose, onSave, balance, positionConfig, aut
       sellConfigObj[label] = value;
     });
 
+    // Calculate total sum
+    let total = 0;
+    let step = freezeLimit / lotSize;
+    Object.values(buyConfigObj).forEach(element => {
+      let count = element / step; 
+      count = Math.ceil(count);
+      total += count;
+    });
+    Object.values(sellConfigObj).forEach(element => {
+      let count = element / step; 
+      count = Math.ceil(count);
+      total += count;
+    });
+    // Object.values(buyConfigObj).forEach(v => total += v);
+    // Object.values(sellConfigObj).forEach(v => total += v);
+   // freezeLimit/lotSize;
+
+    if (total > 25) {
+      setErrorMessage('Total allocation cannot exceed 25.');
+      return;
+    }
+
     const configData = {
       sell: sellConfigObj,
       BUY: buyConfigObj
@@ -126,6 +152,7 @@ export default function Settings({ onClose, onSave, balance, positionConfig, aut
     if (onSave) {
       onSave(configData);
     }
+    setErrorMessage('');
     // For now close the modal after save
     if (onClose) onClose();
   };
@@ -233,6 +260,11 @@ export default function Settings({ onClose, onSave, balance, positionConfig, aut
         </div>
 
         <div style={styles.actions}>
+          {errorMessage && (
+            <div style={{ color: 'red', marginBottom: '0.5rem', textAlign: 'center' }}>
+              {errorMessage}
+            </div>
+          )}
           <div style={styles.saveRow}>
             <button onClick={handleSave} style={styles.primary}>Save</button>
           </div>
