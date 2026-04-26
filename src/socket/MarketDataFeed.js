@@ -53,13 +53,12 @@ const decodeProfobuf = (buffer) => {
 
 // MarketDataFeed class
 class MarketDataFeed {
-  constructor(token, onMessageCallback, instrumentKeys, onConnect, onDisconnect, mode = "full") {
+  constructor(token, onMessageCallback, instrumentKeys, onConnect, onDisconnect) {
     this.token = token;
     this.onMessageCallback = onMessageCallback;
     this.instrumentKeys = instrumentKeys;
     this.onConnect = onConnect;
     this.onDisconnect = onDisconnect;
-    this.mode = mode;
     this.ws = null;
     this.init();
   }
@@ -71,29 +70,26 @@ class MarketDataFeed {
 
   async connect() {
     try {
-      console.log(`Getting WebSocket URL...`);
       const wsUrl = await getUrl(this.token);
-      console.log(`WebSocket URL obtained:`, wsUrl);
-      console.log(`Instrument keys:`, this.instrumentKeys);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log(`Connected`);
+        console.log("Connected");
         if (this.onConnect) this.onConnect();
         const data = {
           guid: "someguid",
           method: "sub",
           data: {
-            mode: this.mode,
+            mode: "ltpc",
             instrumentKeys: this.instrumentKeys,
           },
         };
-        console.log(`Sending subscription:`, data);
+        console.log('Sending subscription:', data);
         this.ws.send(Buffer.from(JSON.stringify(data)));
       };
 
       this.ws.onclose = () => {
-        console.log(`WebSocket closed`);
+        console.log("WebSocket closed");
         if (this.onDisconnect) this.onDisconnect();
       };
 
@@ -107,11 +103,11 @@ class MarketDataFeed {
       };
 
       this.ws.onerror = (error) => {
-        console.log(`WebSocket error:`, error);
+        console.log("WebSocket error:", error);
         if (this.onDisconnect) this.onDisconnect();
       };
     } catch (error) {
-      console.error(`WebSocket connection error:`, error);
+      console.error("WebSocket connection error:", error);
     }
   }
 

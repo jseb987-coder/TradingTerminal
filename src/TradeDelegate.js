@@ -13,41 +13,6 @@ class TradeDelegate {
       async setupCalls() {
         try {
 
-            const niftyFutureData = await this.apiManager.fetchNearestNiftyFutureName();
-            if (!(niftyFutureData && niftyFutureData.data)) {
-                console.warn('[TradeDelegate] Unable to fetch nearest NIFTY future contract; using default symbol.');
-                return false;
-            }
-            this._futureSymbol = niftyFutureData.data.instrument_key;
-            console.log('[TradeDelegate] Nearest NIFTY future contract set to:', niftyFutureData.data.instrument_key);
-
-
-            this._positionConfig = await this.apiManager.fetchTradeConfig();
-            if (!(this._positionConfig && this._positionConfig.data)) {
-                console.warn('[TradeDelegate] Unable to fetch trade configuration; using default settings.');
-                return false;
-            }
-
-            let startDate = await this.calculateHistoricDataStartDate(7);
-            if (!startDate) {
-                console.warn('[TradeDelegate] Unable to calculate historic data start date.');
-                return false;
-            }
-
-            // Fetch historic data from startDate to current date
-            this._historicData = await this.getHistoricData(this._futureSymbol, 'minutes', '1', startDate);
-            if (!this._historicData) {
-                console.warn('[TradeDelegate] Failed to fetch historic data');
-                return false;
-            }
-           // console.log('[TradeDelegate] Historic data fetched successfully:', this._historicData);
-
-           this._bufferData = await this.getBufferData(startDate);
-           if (!this._bufferData) {
-                console.warn('[TradeDelegate] Failed to fetch buffer data');
-                return false;
-            }
-
             const expiryOk = await this.calculateNearestExpiryDate();
             if (expiryOk === false) return false;
 
@@ -69,46 +34,6 @@ class TradeDelegate {
 
         }
         
-    }
-
-    async calculateHistoricDataStartDate(lookback = 5, startDate = null) {
-
-        const baseDate = startDate ? new Date(startDate) : new Date();
-        let checkDate = new Date(baseDate);
-        let validTradingDays = 0;
-
-        // Keep going back until we have enough valid trading days
-        while (validTradingDays < lookback) {
-            checkDate.setDate(checkDate.getDate() - 1);
-
-            // Skip weekends (Saturday = 6, Sunday = 0)
-            const dayOfWeek = checkDate.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-                continue; // Skip weekends
-            }
-
-            // Check if it's a holiday
-            const dateString = checkDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-            try {
-                const isHoliday = await this.apiManager.isMarketHoliday(dateString);
-                if (isHoliday) {
-                    continue; // Skip holidays
-                }
-            } catch (error) {
-                console.warn(`[TradeDelegate] Could not check holiday status for ${dateString}:`, error.message);
-                return false; // Exit on error
-            }
-
-            // If we reach here, it's a valid trading day
-            validTradingDays++;
-        }
-
-        // Format the final date as YYYY-MM-DD
-        const calculatedStartDate = checkDate.toISOString().split('T')[0];
-        const referenceDate = startDate ? startDate : 'today';
-        console.log(`[TradeDelegate] Calculated historic data start date: ${calculatedStartDate} (${lookback} trading days back from ${referenceDate})`);
-
-        return calculatedStartDate;
     }
 
 
@@ -148,52 +73,6 @@ class TradeDelegate {
 
     get currentPosition() {
         return this._currentPosition;
-    }
-
-    get balance() {
-        return this._balance;
-    }
-
-    get positionConfig() {
-        return this._positionConfig;
-    }
-
-    get lotSize() {
-        return this._lotSize;
-    }
-
-    get freezeLimit() {
-        return this._freezeLimit;
-    }
-
-    setPositionConfig(config) {
-        this._positionConfig = { data: config };
-    }
-
-    async postTradeConfig() {
-        try {
-            await this.apiManager.postTradeConfig(this._positionConfig.data);
-            console.log('[TradeDelegate] Trade configuration posted to server successfully.');
-        } catch (error) {
-            console.error('[TradeDelegate] Error posting trade configuration:', error.message);
-        }
-    }
-
-    async fetchPositionConfig() {
-        try {
-            const fetched = await this.apiManager.fetchTradeConfig();
-            if (fetched && fetched.data) {
-                this._positionConfig = fetched;
-                console.log('[TradeDelegate] Trade configuration refetched:', this._positionConfig.data);
-                return true;
-            } else {
-                console.warn('[TradeDelegate] Unable to fetch trade configuration.');
-                return false;
-            }
-        } catch (error) {
-            console.error('[TradeDelegate] Error refetching trade configuration:', error.message);
-            return false;
-        }
     }
 
     setLtp(ltp) {
@@ -236,9 +115,6 @@ class TradeDelegate {
             this.atmCalls = nearestOptions.filter(o => o.instrument_type === 'CE').sort((a, b) => a.strike_price - b.strike_price);
             this.atmPuts = nearestOptions.filter(o => o.instrument_type === 'PE').sort((a, b) => a.strike_price - b.strike_price);
 
-            this._lotSize = this.atmCalls.length > 0 ? this.atmCalls[0].lot_size : (this.atmPuts.length > 0 ? this.atmPuts[0].lot_size : null);
-            this._freezeLimit = this.atmCalls.length > 0 ? this.atmCalls[0].freeze_quantity : (this.atmPuts.length > 0 ? this.atmPuts[0].freeze_quantity : null);
-
             if(this._expiryDate) {
                 console.log(`[TradeDelegate] Nearest expiry option data loaded for date: ${this._expiryDate}`);
                 return true;
@@ -266,18 +142,6 @@ class TradeDelegate {
     async getAccountBalance(segment = null) {
         try {
             this._balance = await this.apiManager.getAccountBalance(segment);
-            if (this._balance && this._balance.errors && Array.isArray(this._balance.errors) && this._balance.errors.length > 0) {
-                const error = this._balance.errors[0];
-                if (error.errorCode === 'UDAPI100072') {
-                    console.log('[TradeDelegate] Funds service unavailable:', error.message);
-                    this._balance = { serviceUnavailable: true, message: error.message };
-                    return true;
-                }
-            }
-            if (this._balance && this._balance.locked) {
-                console.log('[TradeDelegate] Account balance: Account is locked.');
-                return true;
-            }
             console.log('[TradeDelegate] Account balance fetched:', this._balance);
             return true;
         } catch (error) {
@@ -308,79 +172,6 @@ class TradeDelegate {
             }
             // If none <=, return the lowest strike
             return options[0];
-        }
-    }
-
-    async getHistoricData(instrumentKey, intervalType, intervalValue, startDate) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const currentDate = yesterday.toISOString().split('T')[0];
-        const historicData = await this.apiManager.getHistoricDataV3(instrumentKey, intervalType, intervalValue, currentDate, startDate);
-        if (!historicData) {
-                console.warn('[TradeDelegate] Failed to fetch historic data');
-                return false;
-        }
-        const intradayData = await this.apiManager.getIntradayCandles(instrumentKey, intervalType, intervalValue);
-        if (!intradayData) {
-            console.warn('[TradeDelegate] Failed to fetch intraday data');
-            return false;
-        }
-        console.log('[TradeDelegate] Merging historic and intraday data');
-        // Merge intraday data first, then historic data, avoiding duplicates
-        const mergedDataMap = new Map();
-        if (intradayData.data && intradayData.data.candles) {
-            intradayData.data.candles.forEach(candle => {
-                const key = candle.timestamp || candle[0];
-                mergedDataMap.set(key, candle);
-            });
-        }
-        if (historicData.data && historicData.data.candles) {
-            historicData.data.candles.forEach(candle => {
-                const key = candle.timestamp || candle[0];
-                if (!mergedDataMap.has(key)) {
-                    mergedDataMap.set(key, candle);
-                }
-            });
-        }
-        return Array.from(mergedDataMap.values());
-    }
-
-    get historicData() {
-        return this._historicData;
-    }
-
-    setHistoricData(data) {
-        this._historicData = data;
-    }
-
-    async getBufferData(startDate) {
-        try {
-            // Calculate the previous trading day from startDate
-            const previousTradingDay = await this.calculateHistoricDataStartDate(5, startDate);
-            if (!previousTradingDay) {
-                console.warn('[TradeDelegate] Unable to calculate previous trading day for buffer data.');
-                return null;
-            }
-
-            // Fetch historic data for that specific day
-            const bufferData = await this.apiManager.getHistoricDataV3(
-                this._futureSymbol,
-                'minutes',
-                '1',
-                previousTradingDay,
-                previousTradingDay
-            );
-
-            if (!bufferData || !bufferData.data || !bufferData.data.candles) {
-                console.warn('[TradeDelegate] Failed to fetch buffer data for date:', previousTradingDay);
-                return null;
-            }
-
-            console.log(`[TradeDelegate] Buffer data fetched for ${previousTradingDay}:`, bufferData.data.candles.length, 'candles');
-            return bufferData.data.candles;
-        } catch (error) {
-            console.error('[TradeDelegate] Error fetching buffer data:', error.message);
-            return null;
         }
     }
 

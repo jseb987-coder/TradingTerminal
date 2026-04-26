@@ -5,18 +5,17 @@ import AutoTrader from "./AutoTrader";
 import "./App.css";
 
 function App() {
+  // const [authCode, setAuthCode] = useState("eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzQUE1SlAiLCJqdGkiOiI2OTA0MmVmMjRmZjMyMDdlMzQ4ZjM5YTIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYxODgxODQyLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjE5NDgwMDB9.QBLgKsAjggIqv8iOcwU7GlBcauro9ztttZAgreN0Lzg");
+  // const [isAuthenticated, setIsAuthenticated] = useState(true);
 
-  // const [authCode, setAuthCode] = useState("");
-  // const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-   const [authCode, setAuthCode] = useState("eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzQUE1SlAiLCJqdGkiOiI2OTE1OWZiYWI1OWI0OTY0ODA2ZDk5ZTIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzYzMDI0ODI2LCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NjMwNzEyMDB9.R_hMflVNR3gi3sjA3X0OmyuTW83oipFnNX8XlpIpaA4");
-   const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [authCode, setAuthCode] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (authCode.trim() !== "") {
       setIsAuthenticated(true);
-      console.log("Authenticated successfully");
+      console.log("Ann mary is an oola")
     }
   };
 
