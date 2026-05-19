@@ -23,11 +23,11 @@ class AutoTrader extends React.Component {
     this.handleOffline = this.handleOffline.bind(this);
     this.setPositionStatus = this.setPositionStatus.bind(this);
     this.setBusy = this.setBusy.bind(this);
-  this.marketDataFeed = null;
-  this.orderDataFeed = null;
+    this.marketDataFeed = null;
+    this.orderDataFeed = null;
     this._tester = 0;
-  this.handleMarketData = this.handleMarketData.bind(this);
-  this.handleOrderData = this.handleOrderData.bind(this);
+    this.handleMarketData = this.handleMarketData.bind(this);
+    this.handleOrderData = this.handleOrderData.bind(this);
 
     // Initialize button instances
     this.buyButton = new BuyButton(_tradeDelegate, this.setPositionStatus.bind(this), this.setBusy.bind(this));
@@ -44,7 +44,7 @@ class AutoTrader extends React.Component {
     this.orderDataFeed = new OrderDataFeed(token, this.handleOrderData, () => this.setState({ orderStreamConnected: true }), () => this.setState({ orderStreamConnected: false }));
   }
 
-  
+
 
 
   async setUpAutoTrader() {
@@ -106,16 +106,16 @@ class AutoTrader extends React.Component {
     const baseStyle = button.getStyle();
     const style = isDisabled
       ? {
-          ...baseStyle,
-          cursor,
-          opacity: 0.5,
-          filter: 'grayscale(50%)',
-          transform: 'none',
-        }
+        ...baseStyle,
+        cursor,
+        opacity: 0.5,
+        filter: 'grayscale(50%)',
+        transform: 'none',
+      }
       : {
-          ...baseStyle,
-          cursor,
-        };
+        ...baseStyle,
+        cursor,
+      };
 
     return (
       <button

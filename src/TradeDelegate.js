@@ -156,8 +156,9 @@ class TradeDelegate {
 
         if (type === 'CALL') {
             // Find the CE with strike_price >= currentLTP, closest (smallest difference)
-            for (let i = 0; i < options.length; i++) {
-                if (options[i].strike_price >= currentLTP) {
+            
+            for (let i = options.length - 1; i >= 0; i--) {
+                if (options[i].strike_price <= currentLTP) {
                     return options[i];
                 }
             }
@@ -165,8 +166,8 @@ class TradeDelegate {
             return options[options.length - 1];
         } else {
             // Find the PE with strike_price <= currentLTP, closest (largest strike)
-            for (let i = options.length - 1; i >= 0; i--) {
-                if (options[i].strike_price <= currentLTP) {
+           for (let i = 0; i < options.length; i++) {
+                if (options[i].strike_price >= currentLTP) {
                     return options[i];
                 }
             }
